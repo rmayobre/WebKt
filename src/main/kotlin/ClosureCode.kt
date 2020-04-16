@@ -70,10 +70,10 @@ enum class ClosureCode(val value: Int) {
      * 1010 indicates that an endpoint (client) is terminating the
      * connection because it has expected the server to negotiate one or
      * more extension, but the server didn't return them in the response
-     * message of the WebSocketIOTemp handshake. The list of extensions which
+     * message of the WebSocket handshake. The list of extensions which
      * are needed SHOULD appear in the /reason/ part of the Close frame.
      * Note that this status code is not used by the server, because it
-     * can fail the WebSocketIOTemp handshake instead.
+     * can fail the WebSocket handshake instead.
      * @see <a href="https://tools.ietf.org/html/rfc6455#section-7.4.1">RFC 6455, Section 7.4.1 (Defined Status Codes)</a>
      */
     MISSING_EXTENSION(1010),
@@ -92,5 +92,15 @@ enum class ClosureCode(val value: Int) {
      * (e.g., the server certificate can't be verified).
      * @see <a href="https://tools.ietf.org/html/rfc6455#section-7.4.1">RFC 6455, Section 7.4.1 (Defined Status Codes)</a>
      **/
-    TLS_ERROR(1015);
+    TLS_ERROR(1015),
+
+    /** Received an unknown error code. */
+    UNKNOWN(-1);
+
+    companion object {
+        private val map: Map<Int, ClosureCode> = values().map { it.value to it }.toMap()
+
+        /** Find ClosureCode from Integer. If code is not found, default value is UNKNOWN(-1). */
+        fun find(code: Int): ClosureCode = map[code] ?: UNKNOWN
+    }
 }

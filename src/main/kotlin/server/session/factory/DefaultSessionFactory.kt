@@ -11,9 +11,12 @@ import frame.reader.FrameInputStreamReaderFactory
 import frame.reader.FrameReaderFactory
 import frame.writer.FrameOutputStreamWriterFactory
 import frame.writer.FrameWriterFactory
+import http.Method
 import http.Request
 import server.session.Session
-import java.nio.ByteBuffer
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.net.URI
 import java.nio.channels.SocketChannel
 import java.util.*
 
@@ -23,26 +26,13 @@ class DefaultSessionFactory(
     private val readerFactory: FrameReaderFactory = FrameInputStreamReaderFactory()
 ) : SessionFactory {
 
-    private var buffer: ByteBuffer = ByteBuffer.allocate(REQUEST_BUFFER_SIZE)
-
-    override fun create(channel: SocketChannel): Session {
-        return DefaultSession(
-            request = readRequest(channel),
-            channel = channel,
-            factory = frameFactory,
-            reader = readerFactory.create(channel),
-            writer = writerFactory.create(channel)
-        )
-    }
-
-    // TODO put readRequest into the init of the Session
-    @Throws(IllegalArgumentException::class)
-    private fun readRequest(channel: SocketChannel): Request {
-        channel.read(buffer)
-        val request = Request.create(buffer.array())
-        buffer.clear()
-        return request
-    }
+    override fun create(channel: SocketChannel): Session = DefaultSession(
+        request = readRequest(channel),
+        channel = channel,
+        factory = frameFactory,
+        reader = readerFactory.create(channel),
+        writer = writerFactory.create(channel)
+    )
 
     private inner class DefaultSession(
         override val request: Request,
@@ -63,7 +53,7 @@ class DefaultSessionFactory(
             get() = frameQueue.isNotEmpty()
 
         override fun read(): Frame =
-            reader.read(false)
+            reader.read(true)
 
         override fun write() {
             frameQueue.poll()?.let {
@@ -103,142 +93,62 @@ class DefaultSessionFactory(
     }
 
     companion object {
-        private const val REQUEST_BUFFER_SIZE = 1024
+
+        @Throws(IllegalArgumentException::class)
+        private fun readRequest(channel: SocketChannel): Request {
+            val socket = channel.socket()
+            val inputStream = socket.getInputStream()
+            val inputStreamReader = InputStreamReader(inputStream)
+            val bufferedReader = BufferedReader(inputStreamReader)
+
+            val requestLine: List<String> = bufferedReader.readLine().split("\\s+")
+            val headers: MutableMap<String, String> = hashMapOf()
+            var header: String = bufferedReader.readLine()
+            while(header.isNotEmpty()) {
+                val h: List<String> = header.split(":\\s+", limit = 2)
+                headers[h[0]] = h[1]
+                header = bufferedReader.readLine()
+            }
+
+            return create(requestLine, headers)
+        }
+
+        private fun create(requestLine: List<String>, headers: Map<String, String>): Request {
+            return Request(
+                method = Method.find(requestLine[0]),
+                uri = URI(requestLine[1]),
+                path = requestLine[1].substring(0, requestLine[1].lastIndexOf("/")+1),
+                headers = headers
+            )
+        }
+
+        /*
+        @Throws(IllegalArgumentException::class)
+        private fun create(request: ByteArray): Request = create(String(request))
+
+        @Throws(IllegalArgumentException::class)
+        private fun create(request: String): Request = create(request.split("\\r?\\n"))
+
+        @Throws(IllegalArgumentException::class)
+        private fun create(lines: List<String>): Request {
+            val requestLines: List<String> = lines[0].split("\\s+")
+            val headers = mutableMapOf<String, String>()
+            for (i in 1 until lines.size) {
+                val header: List<String> = lines[i].split(Regex(":\\s+"), 2)
+                headers[header[0]] = header[1]
+            }
+
+            return Request(
+                uri = URI(requestLines[1]),
+                path = requestLines[1].substring(0, requestLines[1].lastIndexOf("/") + 1),
+                method = Method.valueOf(requestLines[0].toUpperCase()),
+                headers = mutableMapOf<String, String>().apply {
+                    for (i in 1 until lines.size) {
+                        val header: List<String> = lines[i].split(Regex(":\\s+"), 2)
+                        put(header[0], header[1])
+                    }
+                })
+        }
+         */
     }
 }
-//internal class WebSocketAcceptor(
-//    private val factory: WebSocketSessionFactory,
-//    private val serverSocket: ServerSocket
-//) : Thread(NAME), Closeable {
-//
-//    private val sessions: MutableList<Session> = mutableListOf()
-//
-//    private var listening: Boolean = true
-//
-//    constructor(factory: WebSocketSessionFactory):
-//            this(factory, ServerSocket())
-//
-//    constructor(factory: WebSocketSessionFactory, port: Int):
-//            this(factory, ServerSocket(port))
-//
-//    // TODO constructor that sets a URI
-//
-//    override fun run() {
-//        while(listening) {
-//            try {
-//                val client: Socket = serverSocket.accept()
-//                val inputStream: InputStream = client.getInputStream()
-//                val inputStreamReader = InputStreamReader(inputStream)
-//                val bufferedReader = BufferedReader(inputStreamReader)
-//
-//                val requestLine: List<String> = bufferedReader.readLine().split("\\s+")
-//
-//                val headers: MutableMap<String, String> = hashMapOf()
-//
-//                var header: String = bufferedReader.readLine()
-//                while(header.isNotEmpty()) {
-//                    val h: List<String> = header.split(":\\s+", limit = 2)
-//                    headers[h[0]] = h[1]
-//                    header = bufferedReader.readLine()
-//                }
-//
-//                val request = Request(
-//                    method = Method.find(requestLine[0]),
-//                    uri = URI(requestLine[1]),
-//                    path = requestLine[1].substring(0, requestLine[1].lastIndexOf("/")+1),
-//                    headers = headers
-//                )
-
-//                if (request.isWebSocketUpgrade) {
-//                    sessions.add(factory.create(request,
-//                        reader = FrameInputStreamReader(client.getInputStream()),
-//                        writer = FrameOutputStreamWriter(client.getOutputStream())))
-//                }
-//            } catch (ex: SocketException) {
-//                break
-//            } catch (ex: IOException) {
-//                continue
-//            }
-//        }
-//    }
-//
-//    @Throws(IOException::class)
-//    override fun close() {
-//        listening = false
-//        serverSocket.close()
-//        sessions.forEach { it.close() }
-//    }
-//
-//    companion object {
-//        const val NAME = "IO-Connection-Thread"
-//    }
-//}
-
-/*
-class SocketChannelAcceptor(
-    private val serverSocketChannel: ServerSocketChannel,
-    private val queue: BlockingQueue<WebSocketSession>,
-    private val acceptSelector: Selector,
-    private val processSelector: Selector,
-    bufferSize: Int = 256
-) : Runnable {
-
-    private var buffer: ByteBuffer = ByteBuffer.allocate(bufferSize)
-
-    @Volatile
-    private var exit: Boolean = false
-
-
-    @Throws(IOException::class)
-    override fun run() {
-        try {
-            while (!exit) {
-                if (acceptSelector.select() > 0) {
-                    val selectedKeys: Set<SelectionKey> = acceptSelector.selectedKeys()
-                    selectedKeys.forEach { key ->
-                        if (key.isAcceptable) {
-                            serverSocketChannel.accept().apply {
-                                register(processSelector, SelectionKey.OP_READ)
-                                configureBlocking(false)
-                            }
-                        }
-                        if (key.isReadable) {
-                            val socketChannel: SocketChannel = key.channel() as SocketChannel
-                            val request = readRequest(socketChannel)
-                            if (request.isWebSocketUpgrade) {
-                                queue.put(factory.create(socketChannel))
-                            } else {
-                                socketChannel.close()
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (ex: IOException) {
-            throw ex // TODO handle exception?
-        }
-    }
-
-    private fun readRequest(channel: SocketChannel): Request {
-        channel.read(buffer)
-        val request = Request.create(buffer.array())
-        buffer.clear()
-        return request
-    }
-
-    private fun read(channel: SocketChannel): String {
-        channel.read(buffer)
-        val message = String(buffer.array()).trim { it <= ' ' }
-        buffer.clear()
-        return message
-    }
-
-    fun stop() {
-        exit = true
-    }
-
-    companion object {
-
-    }
-
- */

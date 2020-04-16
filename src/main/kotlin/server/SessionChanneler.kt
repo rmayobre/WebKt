@@ -1,11 +1,16 @@
 package server
 
+import exception.InvalidFrameException
+import exception.NoUTFException
 import exception.WebsocketException
+import frame.Frame
 import frame.OpCode
 import server.session.Session
 import server.session.factory.SessionFactory
 import java.io.Closeable
+import java.io.UnsupportedEncodingException
 import java.net.InetSocketAddress
+import java.nio.ByteBuffer
 import java.nio.channels.SelectionKey
 import java.nio.channels.Selector
 import java.nio.channels.ServerSocketChannel
@@ -60,7 +65,7 @@ class SessionChanneler(
                         key.isWritable -> {
                             val session = key.attachment() as Session
                             if (session.isWriteable) {
-                                executor.submit(ReadTransmission(handler, session))
+                                executor.submit(WriteTransmission(handler, session))
                             }
                         }
                     }
@@ -119,16 +124,55 @@ class SessionChanneler(
             try {
                 val frame = session.read()
                 when (frame.code) {
-                    OpCode.CONTINUATION -> TODO()
-                    OpCode.TEXT -> TODO()
-                    OpCode.BINARY -> TODO()
-                    OpCode.CLOSE -> TODO()
-                    OpCode.PING -> TODO()
-                    OpCode.PONG -> TODO()
+                    OpCode.TEXT -> handleText(frame)
+                    OpCode.BINARY -> handleBinary(frame)
+                    OpCode.CLOSE -> handleClose(frame)
+                    OpCode.PING -> handlePing(frame)
+                    OpCode.PONG -> handlePong(frame)
+                    else -> throw InvalidFrameException(
+                        "Frame's OpCode broke RFC 6455 policy, cannot " +
+                        "send a continuation frame that is not attached" +
+                        " to a data frame."
+                    )
                 }
             } catch (ex: WebsocketException) {
                 handler.onError(session, ex)
             }
+        }
+
+        @Throws(WebsocketException::class)
+        private fun handleText(frame: Frame) {
+            try {
+                val message = frame.data.toString(Charsets.UTF_8)
+                handler.onMessage(session, message)
+            } catch (ex: UnsupportedEncodingException) {
+                throw NoUTFException(ex)
+            }
+        }
+
+        @Throws(WebsocketException::class)
+        private fun handleBinary(frame: Frame) {
+            handler.onMessage(session, frame.data)
+        }
+
+        @Throws(WebsocketException::class)
+        private fun handleClose(frame: Frame) {
+            if (frame.length == 0) {
+                handler.onClose(session, ClosureCode.NO_STATUS)
+            } else {
+                val code = ClosureCode.find(ByteBuffer.wrap(frame.data).int)
+                handler.onClose(session, code)
+            }
+        }
+
+        @Throws(WebsocketException::class)
+        private fun handlePing(frame: Frame) {
+            handler.onPing(session, frame.data)
+        }
+
+        @Throws(WebsocketException::class)
+        private fun handlePong(frame: Frame) {
+            handler.onPong(session, frame.data)
         }
     }
 

@@ -18,14 +18,15 @@ class FrameOutputStreamWriter(private val output: OutputStream) : FrameWriter {
     @Throws(WebsocketException::class)
     override fun write(frame: Frame) {
         when (frame.code) {
-            CONTINUATION -> throw InvalidFrameException(
-                "Cannot write a continuation frame; Continuation " +
-                    "frames must be attached to a data frame.")
             TEXT -> writeData(frame)
             BINARY -> writeData(frame)
             CLOSE -> writeClose(frame)
             PING -> ping(frame)
             PONG -> pong(frame)
+            CONTINUATION -> throw InvalidFrameException(
+                "Cannot write a continuation frame; Continuation " +
+                "frames must be attached to a data frame."
+            )
         }
     }
 
@@ -184,25 +185,25 @@ class FrameOutputStreamWriter(private val output: OutputStream) : FrameWriter {
         private const val OCTET_ONE = 8
 
         /**
-         * WebSocketIOTemp defined opcode for a Binary frame. Includes high bit (0x80)
+         * Websocket defined opcode for a Binary frame. Includes high bit (0x80)
          * to indicate that the frame is the final/complete frame.
          */
         private const val OPCODE_BINARY = 0x82
 
         /**
-         * WebSocketIOTemp defined opcode for a Close frame. Includes high bit (0x80)
+         * Websocket defined opcode for a Close frame. Includes high bit (0x80)
          * to indicate that the frame is the final/complete frame.
          */
         private const val OPCODE_CLOSE = 0x88
 
         /**
-         * WebSocketIOTemp defined opcode for a Pong frame. Includes high bit (0x80)
+         * Websocket defined opcode for a Pong frame. Includes high bit (0x80)
          * to indicate that the frame is the final/complete frame.
          */
         private const val OPCODE_PONG = 0x8A
 
         /**
-         * WebSocketIOTemp defined opcode for a Text frame. Includes high bit (0x80)
+         * Websocket defined opcode for a Text frame. Includes high bit (0x80)
          * to indicate that the frame is the final/complete frame.
          */
         private const val OPCODE_TEXT = 0x81

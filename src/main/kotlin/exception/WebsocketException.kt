@@ -1,6 +1,7 @@
 package exception
 
 import ClosureCode
+import java.io.UnsupportedEncodingException
 
 /**
  * Base exception for WebSocket connectivity issues. WebSocket exceptions follow the RFC 6455
@@ -61,3 +62,6 @@ class HandshakeException : WebsocketException {
     constructor(message: String): super(message, ClosureCode.TLS_ERROR)
     constructor(message: String, cause: Throwable): super(message, cause, ClosureCode.TLS_ERROR)
 }
+
+class NoUTFException(exception: UnsupportedEncodingException):
+    WebsocketException("Text frame did not support UTF-8 character set.", exception, ClosureCode.NO_UTF8)
