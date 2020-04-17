@@ -2,29 +2,27 @@ package client
 
 import ClosureCode
 import exception.WebsocketException
-import frame.OpCode
 import frame.factory.DefaultFrameFactory
 import frame.factory.FrameFactory
-import frame.reader.FrameInputStreamReader
-import frame.reader.FrameReader
-import frame.writer.FrameOutputStreamWriter
-import frame.writer.FrameWriter
-import java.io.Closeable
+import frame.reader.factory.FrameInputStreamReaderFactory
+import frame.reader.factory.FrameReaderFactory
+import frame.writer.factory.FrameOutputStreamWriterFactory
+import frame.writer.factory.FrameWriterFactory
+import java.io.IOException
+import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
+import java.util.concurrent.LinkedBlockingQueue
 
 open class Websocket(
-    private val socket: Socket,
-    private val frameFactory: FrameFactory = DefaultFrameFactory(),
-//    private val frameReader: FrameReader = FrameInputStreamReader(),
-//    private val frameWriter: FrameWriter = FrameOutputStreamWriter(),
-    private val listeners: MutableSet<WebsocketListener> = mutableSetOf()
-) : WebsocketEventHandler, Closeable {
-    //TODO turn into a Class. Create a list of listeners. Make this implement the listener
-    // Have the user override the callbacks of the WebSocketListener or create
-    // new listeners to handle the callbacks.
+    protected val address: InetSocketAddress,
+    protected val frameFactory: FrameFactory,
+    protected val readerFactory: FrameReaderFactory,
+    protected val writerFactory: FrameWriterFactory,
+    protected val listeners: MutableSet<WebsocketListener>
+) : WebsocketEventHandler {
 
-//    constructor(address: InetSocketAddress)
+    private lateinit var socket: Socket
 
     private lateinit var writer: WebsocketWriter
 
@@ -33,43 +31,51 @@ open class Websocket(
     var isClosed: Boolean = false
         private set
 
+    constructor(address: InetSocketAddress): this(
+        address,
+        DefaultFrameFactory(),
+        FrameInputStreamReaderFactory(),
+        FrameOutputStreamWriterFactory(),
+        mutableSetOf())
+
+    @Throws(IOException::class)
     fun connect() {
-        writer = WebsocketWriter(frameFactory)
-//        reader = WebsocketReader(frameFactory, this)
+        socket = Socket().apply {
+            connect(address)
+        }.also {
+            isClosed = false
+            writer = WebsocketWriter(
+                writerFactory.create(it),
+                frameFactory,
+                LinkedBlockingQueue(),
+                this)
+            reader = WebsocketReader(readerFactory.create(it), this)
+        }
         TODO("Send handshake request.")
     }
 
-    fun add(listener: WebsocketListener): Boolean = listeners.add(listener)
-
-    fun remove(listener: WebsocketListener): Boolean = listeners.remove(listener)
-
-    fun clear() = listeners.clear()
-
     fun send(message: String) {
-        TODO("Not yet implemented")
+        writer.send(message)
     }
 
     fun send(data: ByteArray) {
-        TODO("Not yet implemented")
+        writer.send(data)
     }
 
     fun ping(data: ByteArray? = null) {
-        TODO("Not yet implemented")
+        writer.ping(data)
     }
 
     fun pong(data: ByteArray? = null) {
-        TODO("Not yet implemented")
+        writer.pong(data)
     }
 
     @Synchronized
-    fun close(code: ClosureCode) {
+    fun close(code: ClosureCode = ClosureCode.NORMAL) {
         if (!isClosed) {
-            TODO("Close socket, then notify listeners of closure.")
+            reader.close()
+            writer.close(code)
         }
-    }
-
-    override fun close() {
-        close(ClosureCode.NORMAL) // Send close code.
     }
 
     override fun onOpen() {
@@ -84,15 +90,16 @@ open class Websocket(
         listeners.forEach { it.onMessage(this, data) }
     }
 
-    override fun onPing(data: ByteArray?) {
+    override fun onPing(data: ByteArray) {
         listeners.forEach { it.onPing(this, data) }
     }
 
-    override fun onPong(data: ByteArray?) {
+    override fun onPong(data: ByteArray) {
         listeners.forEach { it.onPong(this, data) }
     }
 
     override fun onClose(closureCode: ClosureCode) {
+        socket.close()
         listeners.forEach { it.onClose(this, closureCode) }
     }
 
@@ -100,4 +107,33 @@ open class Websocket(
         listeners.forEach { it.onError(this, exception) }
     }
 
+    data class Builder(private val address: InetSocketAddress) {
+
+        private var frameFactory: FrameFactory = DefaultFrameFactory()
+
+        private var readerFactory: FrameReaderFactory = FrameInputStreamReaderFactory()
+
+        private var writerFactory: FrameWriterFactory = FrameOutputStreamWriterFactory()
+
+        private var listeners: MutableSet<WebsocketListener> = mutableSetOf()
+
+        constructor(port: Int): this(InetSocketAddress(port))
+
+        constructor(host: String, port: Int): this(InetSocketAddress(host, port))
+
+        constructor(address: InetAddress, port: Int): this(InetSocketAddress(address, port))
+
+        fun setFrameFactory(factory: FrameFactory) = apply { frameFactory = factory }
+
+        fun setReaderFactory(factory: FrameReaderFactory) = apply { readerFactory = factory }
+
+        fun setWriterFactory(factory: FrameWriterFactory) = apply { writerFactory = factory }
+
+        fun addListener(listener: WebsocketListener) = apply { listeners.add(listener) }
+
+        @Throws(IOException::class)
+        fun buildAndConnect(): Websocket = build().also { it.connect() }
+
+        fun build(): Websocket = Websocket(address, frameFactory, readerFactory, writerFactory, listeners)
+    }
 }

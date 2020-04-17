@@ -40,17 +40,6 @@ data class Frame(
 
     val isControlFrame: Boolean = code.isControl
 
-    /** Construct a dummy Frame. Helps creating the singly linked list. */
-    constructor(): this(
-        isFin = false,
-        rsv1 = false,
-        rsv2 = false,
-        rsv3 = false,
-        isMasked = false,
-        code = OpCode.CONTINUATION,
-        length = 0,
-        payload = ByteArrayOutputStream())
-
     /**
      * Read first and second byte of a stream from an endpoint into a fragment.
      * @param first - First byte from stream.
@@ -70,7 +59,6 @@ data class Frame(
         payload = ByteArrayOutputStream())
 
     init {
-        // Run some tests to make sure a valid frame is being constructed.
         if (isControlFrame) {
             if (!isFin)
                 throw InvalidFrameException("A control frame must be final; No fragmentation.")

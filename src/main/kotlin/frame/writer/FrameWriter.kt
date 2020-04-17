@@ -4,6 +4,8 @@ import exception.HandshakeException
 import exception.WebsocketException
 import frame.Frame
 
+// TODO Handle client-side masking.
+// TODO Should this be closeable?
 interface FrameWriter {
     /**
      *
@@ -18,6 +20,4 @@ interface FrameWriter {
      */
     @Throws(HandshakeException::class)
     fun writeHandshake(key: String)
-//
-//    fun close(code: ClosureCode)
 }

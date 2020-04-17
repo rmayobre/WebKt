@@ -2,6 +2,7 @@ package frame.reader.factory
 
 import frame.reader.FrameInputStreamReader
 import frame.reader.FrameReader
+import java.net.Socket
 import java.nio.channels.SocketChannel
 
 class FrameInputStreamReaderFactory(
@@ -12,7 +13,12 @@ class FrameInputStreamReaderFactory(
      */
     private val frameSizeLimit: Int = Int.MAX_VALUE
 ) : FrameReaderFactory {
+
+    override fun create(socket: Socket): FrameReader {
+        return FrameInputStreamReader(socket.getInputStream(), frameSizeLimit)
+    }
+
     override fun create(channel: SocketChannel): FrameReader {
-        return FrameInputStreamReader(channel.socket().getInputStream(), frameSizeLimit)
+        return create(channel.socket())
     }
 }

@@ -4,6 +4,7 @@ import exception.LargeFrameException
 import frame.Frame
 import exception.MissingMaskFragmentException
 import exception.WebsocketIOException
+import frame.OpCode
 import java.io.*
 import kotlin.experimental.and
 import kotlin.experimental.xor
@@ -20,7 +21,7 @@ class FrameInputStreamReader(
 
     override fun read(requiresMask: Boolean): Frame {
         var totalSize = 0
-        val head = Frame()
+        val head = dummyFrame()
         try {
             var last: Frame = head
             do {
@@ -105,7 +106,20 @@ class FrameInputStreamReader(
          * yet-to-be-provided unsigned 64-bit integer (MSB = 0).
          */
         private const val PAYLOAD_LENGTH_64 = 0x7F
+
         private const val TWO_BYTE_FRAME = 0x2
+
         private const val EIGHT_BYTE_FRAME = 0x8
+
+        /** Construct a dummy Frame. Helps creating the singly linked list. */
+        private fun dummyFrame() = Frame(
+            isFin = false,
+            rsv1 = false,
+            rsv2 = false,
+            rsv3 = false,
+            isMasked = false,
+            code = OpCode.CONTINUATION,
+            length = 0,
+            payload = ByteArrayOutputStream())
     }
 }

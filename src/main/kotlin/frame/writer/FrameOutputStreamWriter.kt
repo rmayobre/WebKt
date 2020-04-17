@@ -8,6 +8,7 @@ import exception.InvalidFrameException
 import exception.WebsocketException
 import exception.WebsocketIOException
 import frame.Frame
+import frame.OpCode
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.security.MessageDigest
@@ -73,7 +74,7 @@ class FrameOutputStreamWriter(private val output: OutputStream) : FrameWriter {
 
     @Throws(WebsocketException::class)
     private fun writeData(frame: Frame) {
-        var currentFrame = Frame().also { it.next = frame }
+        var currentFrame = dummyFrame(frame)
         while (currentFrame.next != null) {
             if (currentFrame.isFin) {
                 break
@@ -191,6 +192,18 @@ class FrameOutputStreamWriter(private val output: OutputStream) : FrameWriter {
          * to indicate that the frame is the final/complete frame.
          */
         private const val OPCODE_TEXT = 0x81
+
+        /** Construct a dummy Frame. Helps creating the singly linked list. */
+        private fun dummyFrame(next: Frame) = Frame(
+            isFin = false,
+            rsv1 = false,
+            rsv2 = false,
+            rsv3 = false,
+            isMasked = false,
+            code = OpCode.CONTINUATION,
+            length = 0,
+            payload = ByteArrayOutputStream()
+        ).also { it.next = next }
 
         /** Convert Short to ByteArray. */
         private fun Short.toByteArray(): ByteArray = toByteArray(2)
