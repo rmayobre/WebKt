@@ -8,7 +8,7 @@ import frame.Frame
  * Websocket connection (Session or Websocket).
  * @see DefaultFrameFactory default implementation.
  * @see server.session.Session A WebsocketServer's session for a client Websocket connection.
- * @see client.WebSocket A client-side implementation of a Websocket connection.
+ * @see client.Websocket A client-side implementation of a Websocket connection.
  */
 interface FrameFactory {
      /** Create a Binary Frame. */
@@ -24,5 +24,5 @@ interface FrameFactory {
     fun pong(data: ByteArray? = null): Frame
 
     /** Create a Closure Frame. */
-    fun close(code: ClosureCode? = null): Frame
+    fun close(code: ClosureCode = ClosureCode.NORMAL): Frame
 }

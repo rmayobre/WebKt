@@ -7,35 +7,37 @@ import java.io.ByteArrayOutputStream
 
 class DefaultFrameFactory(
     /** Byte limit for each frame before it requires fragmentation. */
-    private val sizeLimit: Int = 2048
+    private val fragmentSize: Int = DEFAULT_FRAGMENT_SIZE
 ) : FrameFactory {
     override fun binary(data: ByteArray): Frame =
-        data.toDataFrame(sizeLimit, OpCode.BINARY)
+        data.toDataFrame(fragmentSize, OpCode.BINARY)
 
-    override fun text(data: String): Frame =
-        data.toByteArray().toDataFrame(sizeLimit, OpCode.TEXT)
+    override fun text(msg: String): Frame =
+        msg.toByteArray().toDataFrame(fragmentSize, OpCode.TEXT)
 
-    override fun ping(data: ByteArray?): Frame {
-        TODO("Not yet implemented")
-    }
+    override fun ping(data: ByteArray?): Frame =
+        data.toControlFrame(OpCode.PING)
 
-    override fun pong(data: ByteArray?): Frame {
-        TODO("Not yet implemented")
-    }
+    override fun pong(data: ByteArray?): Frame =
+        data.toControlFrame(OpCode.PONG)
 
-    override fun close(code: ClosureCode?): Frame {
-        TODO("Not yet implemented")
-    }
+    override fun close(code: ClosureCode): Frame =
+        code.bytes.toControlFrame(OpCode.CLOSE)
 
     companion object {
 
-        private fun ClosureCode.toByteArray(): ByteArray {
-            TODO("Convert ClosureCode into the proper byte array for a closing frame.")
-        }
+        private const val DEFAULT_FRAGMENT_SIZE = 8196
 
-        private fun ByteArray?.toControlFrame(): Frame {
-            TODO("Implement conversion to control FINAL frame")
-        }
+        private fun ByteArray?.toControlFrame(code: OpCode): Frame = Frame(
+            isFin = true,
+            rsv1 = false,
+            rsv2 = false,
+            rsv3 = false,
+            isMasked = false,
+            code = code,
+            length = this?.size ?: 0,
+            payload = ByteArrayOutputStream()
+        ).also { this?.let { data -> it.payload.write(data) } }
 
         private fun ByteArray.toDataFrame(limit: Int, code: OpCode): Frame {
             if (size > limit) {

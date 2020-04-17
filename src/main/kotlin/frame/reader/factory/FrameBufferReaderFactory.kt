@@ -1,9 +1,12 @@
-package frame.reader
+package frame.reader.factory
 
+import frame.reader.FrameBufferReader
+import frame.reader.FrameReader
 import java.nio.ByteBuffer
 import java.nio.channels.SocketChannel
 
-class FrameBufferReaderFactory(private val bufferSize: Int) : FrameReaderFactory {
+class FrameBufferReaderFactory(private val bufferSize: Int) :
+    FrameReaderFactory {
 
     init {
         if (bufferSize < 8) {

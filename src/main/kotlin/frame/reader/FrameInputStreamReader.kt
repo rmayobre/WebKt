@@ -1,5 +1,6 @@
 package frame.reader
 
+import exception.LargeFrameException
 import frame.Frame
 import exception.MissingMaskFragmentException
 import exception.WebsocketIOException
@@ -7,14 +8,27 @@ import java.io.*
 import kotlin.experimental.and
 import kotlin.experimental.xor
 
-class FrameInputStreamReader(private val input: InputStream) : FrameReader {
+class FrameInputStreamReader(
+    private val input: InputStream,
+    /**
+     * The limit for how large a frame can be. This includes frames that
+     * are fragmented. The reason is to prevent an overload on the system.
+     * @see <a href="https://tools.ietf.org/html/rfc6455#section-10.4">RFC 6455, Section 10.4 (Defined Status Codes)</a>
+     */
+    private val frameSizeLimit: Int
+) : FrameReader {
 
     override fun read(requiresMask: Boolean): Frame {
+        var totalSize = 0
         val head = Frame()
         try {
             var last: Frame = head
             do {
                 val frame = read(input.read(), input.read(), requiresMask)
+                totalSize += frame.length
+                if (totalSize > frameSizeLimit) {
+                    throw LargeFrameException(frameSizeLimit)
+                }
                 last.next = frame
                 last = frame
             } while (!last.isFin)

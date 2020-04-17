@@ -1,9 +1,12 @@
-package frame.writer
+package frame.writer.factory
 
+import frame.writer.FrameBufferWriter
+import frame.writer.FrameWriter
 import java.nio.ByteBuffer
 import java.nio.channels.SocketChannel
 
-class FrameBufferWriterFactory(private val bufferSize: Int) : FrameWriterFactory {
+class FrameBufferWriterFactory(private val bufferSize: Int) :
+    FrameWriterFactory {
 
     init {
         if (bufferSize < 8) {

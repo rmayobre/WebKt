@@ -8,6 +8,7 @@ import exception.InvalidFrameException
 import exception.WebsocketException
 import exception.WebsocketIOException
 import frame.Frame
+import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
@@ -101,10 +102,16 @@ class FrameOutputStreamWriter(private val output: OutputStream) : FrameWriter {
         }
     }
 
+    @Throws(WebsocketException::class)
+    private fun ping(frame: Frame) { TODO("Implement ping functionality") }
+
+    @Throws(WebsocketException::class)
+    private fun pong(frame: Frame) { TODO("Implement ping functionality") }
+
     @Synchronized
     @Throws(WebsocketException::class)
     private fun writeClose(frame: Frame) {
-        val status = ByteBuffer.wrap(frame.payload.toByteArray()).int
+        val status = frame.payload.toInt()
         try {
             output.write(byteArrayOf(
                 OPCODE_CLOSE.toByte(), 0x02,
@@ -114,29 +121,6 @@ class FrameOutputStreamWriter(private val output: OutputStream) : FrameWriter {
         } catch (ex: IOException) {
             throw WebsocketIOException(ex)
         }
-    }
-
-    @Throws(WebsocketException::class)
-    private fun ping(frame: Frame) { TODO("Implement ping functionality") }
-
-    @Throws(WebsocketException::class)
-    private fun pong(frame: Frame) { TODO("Implement ping functionality") }
-
-    /** Convert Short to ByteArray. */
-    private fun Short.toByteArray(): ByteArray = toByteArray(2)
-
-    /** Convert Long to ByteArray. */
-    private fun Long.toByteArray(): ByteArray = toByteArray(8)
-
-    /**
-     * Create a ByteArray from the provided Number
-     * @param length Byte length of Number.
-     */
-    private fun Number.toByteArray(length: Int): ByteArray {
-        val data = ByteArray(length)
-        for (i in 0 until length)
-            data[i] = (this.toLong() shr 8 * (length - i - 1) and 0xFF).toByte()
-        return data
     }
 
     companion object {
@@ -208,5 +192,24 @@ class FrameOutputStreamWriter(private val output: OutputStream) : FrameWriter {
          */
         private const val OPCODE_TEXT = 0x81
 
+        /** Convert Short to ByteArray. */
+        private fun Short.toByteArray(): ByteArray = toByteArray(2)
+
+        /** Convert Long to ByteArray. */
+        private fun Long.toByteArray(): ByteArray = toByteArray(8)
+
+        /**
+         * Create a ByteArray from the provided Number
+         * @param length Byte length of Number.
+         */
+        private fun Number.toByteArray(length: Int): ByteArray {
+            val data = ByteArray(length)
+            for (i in 0 until length)
+                data[i] = (this.toLong() shr 8 * (length - i - 1) and 0xFF).toByte()
+            return data
+        }
+
+        private fun ByteArrayOutputStream.toInt(): Int =
+            ByteBuffer.wrap(toByteArray()).int
     }
 }

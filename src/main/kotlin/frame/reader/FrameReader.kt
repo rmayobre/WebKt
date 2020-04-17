@@ -5,9 +5,6 @@ import frame.Frame
 import java.io.Closeable
 
 interface FrameReader : Closeable {
-
-
-
     /**
      * Reads the WebSocketIO's input stream of data and produces a list of fragments.
      * These fragments will add up to become one frame of data.

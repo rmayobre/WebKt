@@ -14,7 +14,13 @@ import kotlin.experimental.xor
 class FrameBufferReader(
     private val channel: SocketChannel,
     /** Buffer size cannot be smaller than two integers (e.g 2(Integers) * 4(Bytes) = 8(Minimum Size)) */
-    private val buffer: ByteBuffer
+    private val buffer: ByteBuffer,
+    /**
+     * The limit for how large a frame can be. This includes frames that
+     * are fragmented. The reason is to prevent an overload on the system.
+     * @see <a href="https://tools.ietf.org/html/rfc6455#section-10.4">RFC 6455, Section 10.4 (Defined Status Codes)</a>
+     */
+    private val frameSizeLimit: Int
 ) : FrameReader {
 
     override fun read(requiresMask: Boolean): Frame {

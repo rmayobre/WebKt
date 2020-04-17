@@ -1,5 +1,6 @@
-package frame.writer
+package frame.writer.factory
 
+import frame.writer.FrameWriter
 import java.nio.channels.SocketChannel
 
 interface FrameWriterFactory {

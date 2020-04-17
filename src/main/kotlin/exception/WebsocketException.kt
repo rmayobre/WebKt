@@ -65,3 +65,6 @@ class HandshakeException : WebsocketException {
 
 class NoUTFException(exception: UnsupportedEncodingException):
     WebsocketException("Text frame did not support UTF-8 character set.", exception, ClosureCode.NO_UTF8)
+
+class LargeFrameException(limit: Int):
+    WebsocketException("Frame(s) exceeds size limit of $limit bytes.", ClosureCode.TOO_BIG)

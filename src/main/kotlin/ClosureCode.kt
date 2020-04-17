@@ -1,3 +1,5 @@
+import java.nio.ByteBuffer
+
 enum class ClosureCode(val value: Int) {
     /**
      * 1000 indicates a normal closure, meaning that the purpose for
@@ -82,7 +84,7 @@ enum class ClosureCode(val value: Int) {
      * it encountered an unexpected condition that prevented it from
      * fulfilling the request.
      * @see <a href="https://tools.ietf.org/html/rfc6455#section-7.4.1">RFC 6455, Section 7.4.1 (Defined Status Codes)</a>
-     **/
+     */
     INTERNAL_ERROR(1011),
     /**
      * 1015 is a reserved value and MUST NOT be set as a status code in a
@@ -91,11 +93,13 @@ enum class ClosureCode(val value: Int) {
      * connection was closed due to a failure to perform a TLS handshake
      * (e.g., the server certificate can't be verified).
      * @see <a href="https://tools.ietf.org/html/rfc6455#section-7.4.1">RFC 6455, Section 7.4.1 (Defined Status Codes)</a>
-     **/
+     */
     TLS_ERROR(1015),
 
     /** Received an unknown error code. */
     UNKNOWN(-1);
+
+    val bytes: ByteArray = ByteBuffer.allocate(4).putInt(value).array()
 
     companion object {
         private val map: Map<Int, ClosureCode> = values().map { it.value to it }.toMap()

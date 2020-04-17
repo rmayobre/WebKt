@@ -7,10 +7,10 @@ import frame.factory.DefaultFrameFactory
 import frame.reader.FrameReader
 import frame.writer.FrameWriter
 import frame.factory.FrameFactory
-import frame.reader.FrameInputStreamReaderFactory
-import frame.reader.FrameReaderFactory
-import frame.writer.FrameOutputStreamWriterFactory
-import frame.writer.FrameWriterFactory
+import frame.reader.factory.FrameInputStreamReaderFactory
+import frame.reader.factory.FrameReaderFactory
+import frame.writer.factory.FrameOutputStreamWriterFactory
+import frame.writer.factory.FrameWriterFactory
 import http.Method
 import http.Request
 import server.session.Session
