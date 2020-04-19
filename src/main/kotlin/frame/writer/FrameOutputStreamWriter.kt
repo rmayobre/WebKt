@@ -1,5 +1,6 @@
 package frame.writer
 
+import Handshake
 import java.io.IOException
 import java.io.OutputStream
 import exception.HandshakeException
@@ -10,10 +11,10 @@ import exception.WebsocketIOException
 import frame.Frame
 import frame.OpCode
 import java.io.ByteArrayOutputStream
-import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import java.util.*
+import kotlin.experimental.xor
 
 class FrameOutputStreamWriter(private val output: OutputStream) : FrameWriter {
 
@@ -23,14 +24,20 @@ class FrameOutputStreamWriter(private val output: OutputStream) : FrameWriter {
             TEXT -> writeData(frame)
             BINARY -> writeData(frame)
             CLOSE -> writeClose(frame)
-            PING -> ping(frame)
-            PONG -> pong(frame)
+            PING -> writeControl(frame)
+            PONG -> writeControl(frame)
             CONTINUATION -> throw InvalidFrameException(
                 "Cannot write a continuation frame; Continuation " +
                 "frames must be attached to a data frame."
             )
         }
     }
+
+    @Throws(WebsocketException::class)
+    fun write(handshake: Handshake) {
+
+    }
+
 
     @Throws(WebsocketException::class)
     override fun writeHandshake(key: String) {
@@ -48,30 +55,6 @@ class FrameOutputStreamWriter(private val output: OutputStream) : FrameWriter {
         }
     }
 
-    /**
-     * Generates acceptance key to be sent back to client when performing handshake.
-     * @return The acceptance key.
-     * @throws WebsocketException Thrown when there is an error with the SHA-1 hash function result.
-     * @see <a href="https://tools.ietf.org/html/rfc6455#section-4.2.2">RFC 6455, Section 4.2.2 (Sending the Server's Opening Handshake)</a>
-     */
-    @Throws(HandshakeException::class)
-    private fun String.toAcceptanceKey(): String {
-        try {
-            val message: MessageDigest = MessageDigest.getInstance("SHA-1")
-            val magicString: String = this + MAGIC_KEY
-            message.update(magicString.toByteArray(), 0, magicString.length)
-            // TODO create custom encoder compatible with android and java
-            return Base64.getEncoder().encodeToString(message.digest())
-            // Android encoder
-//            return Base64.encodeToString(message.digest(), Base64.DEFAULT)
-        } catch (ex: NoSuchAlgorithmException) {
-            throw HandshakeException(
-                "Could not apply SHA-1 hashing function to key.",
-                ex
-            )
-        }
-    }
-
     @Throws(WebsocketException::class)
     private fun writeData(frame: Frame) {
         var currentFrame = dummyFrame(frame)
@@ -81,43 +64,33 @@ class FrameOutputStreamWriter(private val output: OutputStream) : FrameWriter {
             }
 
             currentFrame = currentFrame.next!!
-            val payload: ByteArray = frame.payload.toByteArray()
-            when {
-                payload.size <= LENGTH_16_MIN -> {
-                    output.write(payload.size)
-                    output.write(payload)
-                }
-                payload.size <= LENGTH_64_MIN -> {
-                    output.write(LENGTH_16)
-                    val lenBytes = (payload.size.toShort()).toByteArray()
-                    output.write(lenBytes)
-                    output.write(payload)
-                }
-                else -> {
-                    output.write(LENGTH_64)
-                    val lenBytes = (payload.size.toLong()).toByteArray()
-                    output.write(lenBytes)
-                    output.write(payload)
-                }
+
+            if (currentFrame.isMasked) {
+                val key = Random().nextInt()
+                output.writeMaskedPayload(frame, key)
+            } else {
+                output.writePayload(currentFrame)
             }
         }
     }
 
     @Throws(WebsocketException::class)
-    private fun ping(frame: Frame) { TODO("Implement ping functionality") }
-
-    @Throws(WebsocketException::class)
-    private fun pong(frame: Frame) { TODO("Implement ping functionality") }
+    private fun writeControl(frame: Frame) {
+        if (frame.next != null) {
+            throw InvalidFrameException("A control frame cannot be fragmented.")
+        } else if (frame.isMasked) {
+            val key = Random().nextInt()
+            output.writeMaskedPayload(frame, key)
+        } else {
+            output.writePayload(frame)
+        }
+    }
 
     @Synchronized
     @Throws(WebsocketException::class)
     private fun writeClose(frame: Frame) {
-        val status = frame.payload.toInt()
         try {
-            output.write(byteArrayOf(
-                OPCODE_CLOSE.toByte(), 0x02,
-                ((status and MASK_LOW_WORD_HIGH_BYTE) shr OCTET_ONE).toByte(),
-                (status and MASK_LOW_WORD_LOW_BYTE).toByte()))
+            writeControl(frame)
             output.close()
         } catch (ex: IOException) {
             throw WebsocketIOException(ex)
@@ -154,59 +127,11 @@ class FrameOutputStreamWriter(private val output: OutputStream) : FrameWriter {
          */
         private const val LENGTH_64_MIN = 0xffff
 
-	    /**
-         * Binary mask to remove all but the bits of octet 1.
-         */
-        private const val MASK_LOW_WORD_HIGH_BYTE = 0x0000ff00
-
-        /**
-         * Binary mask to remove all but the lowest 8 bits (octet 0).
-         */
-        private const val MASK_LOW_WORD_LOW_BYTE = 0x000000ff
-
-        /**
-         * Number of bits required to shift octet 1 into the lowest 8 bits.
-         */
-        private const val OCTET_ONE = 8
-
-        /**
-         * Websocket defined opcode for a Binary frame. Includes high bit (0x80)
-         * to indicate that the frame is the final/complete frame.
-         */
-        private const val OPCODE_BINARY = 0x82
-
-        /**
-         * Websocket defined opcode for a Close frame. Includes high bit (0x80)
-         * to indicate that the frame is the final/complete frame.
-         */
-        private const val OPCODE_CLOSE = 0x88
-
-        /**
-         * Websocket defined opcode for a Pong frame. Includes high bit (0x80)
-         * to indicate that the frame is the final/complete frame.
-         */
-        private const val OPCODE_PONG = 0x8A
-
-        /**
-         * Websocket defined opcode for a Text frame. Includes high bit (0x80)
-         * to indicate that the frame is the final/complete frame.
-         */
-        private const val OPCODE_TEXT = 0x81
-
-        /** Construct a dummy Frame. Helps creating the singly linked list. */
-        private fun dummyFrame(next: Frame) = Frame(
-            isFin = false,
-            rsv1 = false,
-            rsv2 = false,
-            rsv3 = false,
-            isMasked = false,
-            code = OpCode.CONTINUATION,
-            length = 0,
-            payload = ByteArrayOutputStream()
-        ).also { it.next = next }
-
         /** Convert Short to ByteArray. */
         private fun Short.toByteArray(): ByteArray = toByteArray(2)
+
+        /** Convert Int to ByteArray. */
+        private fun Int.toByteArray(): ByteArray = toByteArray(4)
 
         /** Convert Long to ByteArray. */
         private fun Long.toByteArray(): ByteArray = toByteArray(8)
@@ -222,7 +147,111 @@ class FrameOutputStreamWriter(private val output: OutputStream) : FrameWriter {
             return data
         }
 
-        private fun ByteArrayOutputStream.toInt(): Int =
-            ByteBuffer.wrap(toByteArray()).int
+        /**
+         * Generates acceptance key to be sent back to client when performing handshake.
+         * @return The acceptance key.
+         * @throws WebsocketException Thrown when there is an error with the SHA-1 hash function result.
+         * @see <a href="https://tools.ietf.org/html/rfc6455#section-4.2.2">RFC 6455, Section 4.2.2 (Sending the Server's Opening Handshake)</a>
+         */
+        @Throws(HandshakeException::class)
+        private fun String.toAcceptanceKey(): String {
+            try {
+                val message: MessageDigest = MessageDigest.getInstance("SHA-1")
+                val magicString: String = this + MAGIC_KEY
+                message.update(magicString.toByteArray(), 0, magicString.length)
+                // TODO create custom encoder compatible with android and java
+                return Base64.getEncoder().encodeToString(message.digest())
+                // Android encoder
+//            return Base64.encodeToString(message.digest(), Base64.DEFAULT)
+            } catch (ex: NoSuchAlgorithmException) {
+                throw HandshakeException(
+                    "Could not apply SHA-1 hashing function to key.",
+                    ex
+                )
+            }
+        }
+
+        /** Construct a dummy Frame. Helps creating the singly linked list. */
+        private fun dummyFrame(next: Frame) = Frame(
+            isFin = false,
+            rsv1 = false,
+            rsv2 = false,
+            rsv3 = false,
+            isMasked = false,
+            code = OpCode.CONTINUATION,
+            length = 0,
+            payload = ByteArrayOutputStream()
+        ).also { it.next = next }
+
+        /**
+         * Write an un-masked payload.
+         */
+        private fun OutputStream.writePayload(frame: Frame) {
+            val payload: ByteArray = frame.payload.toByteArray()
+            when {
+                payload.size <= LENGTH_16_MIN -> {
+                    write(payload.size)
+                    write(payload)
+                }
+                payload.size <= LENGTH_64_MIN -> {
+                    write(LENGTH_16)
+                    val lenBytes = (payload.size.toShort()).toByteArray()
+                    write(lenBytes)
+                    write(payload)
+                }
+                else -> {
+                    write(LENGTH_64)
+                    val lenBytes = (payload.size.toLong()).toByteArray()
+                    write(lenBytes)
+                    write(payload)
+                }
+            }
+        }
+
+        /**
+         * Write a masked payload.
+         * @see <a href="https://tools.ietf.org/html/rfc6455#section-5.3">RFC 6455, Section 5.3 (Client-to-Server Masking)</a>
+         */
+        private fun OutputStream.writeMaskedPayload(frame: Frame, key: Int) {
+            val payload: ByteArray = frame.payload.toByteArray()
+            when {
+                payload.size <= LENGTH_16_MIN -> {
+                    write(payload.size)
+                    write(key)
+                    write(payload.applyMask(key))
+                }
+                payload.size <= LENGTH_64_MIN -> {
+                    write(LENGTH_16)
+                    val lenBytes = (payload.size.toShort()).toByteArray()
+                    write(lenBytes)
+                    write(key)
+                    write(payload.applyMask(key))
+                }
+                else -> {
+                    write(LENGTH_64)
+                    val lenBytes = (payload.size.toLong()).toByteArray()
+                    write(lenBytes)
+                    write(key)
+                    write(payload.applyMask(key))
+                }
+            }
+        }
+
+        /**
+         * Masking the provided ByteArray with the xor algorithm declared in
+         * RFC 6455.
+         *
+         *  j                   = i MOD 4
+         *  transformed-octet-i = original-octet-i XOR masking-key-octet-j
+         *
+         * @see <a href="https://tools.ietf.org/html/rfc6455#section-5.3">RFC 6455, Section 5.3 (Client-to-Server Masking)</a>
+         */
+        private fun ByteArray.applyMask(key: Int): ByteArray {
+            val maskingKey = key.toByteArray()
+            for (i in indices) {
+                this[i] = this[i] xor maskingKey[i % 4]
+            }
+            return this
+        }
     }
 }

@@ -33,7 +33,7 @@ open class Websocket(
 
     constructor(address: InetSocketAddress): this(
         address,
-        DefaultFrameFactory(),
+        DefaultFrameFactory(true),
         FrameInputStreamReaderFactory(),
         FrameOutputStreamWriterFactory(),
         mutableSetOf())
@@ -109,7 +109,7 @@ open class Websocket(
 
     data class Builder(private val address: InetSocketAddress) {
 
-        private var frameFactory: FrameFactory = DefaultFrameFactory()
+        private var frameFactory: FrameFactory = DefaultFrameFactory(true)
 
         private var readerFactory: FrameReaderFactory = FrameInputStreamReaderFactory()
 
