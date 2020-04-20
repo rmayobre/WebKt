@@ -2,13 +2,14 @@ package server.session.factory
 
 import ClosureCode
 import exception.HandshakeException
+import exception.WebsocketException
 import frame.Frame
 import frame.factory.DefaultFrameFactory
-import frame.reader.FrameReader
-import frame.writer.FrameWriter
 import frame.factory.FrameFactory
+import frame.reader.FrameReader
 import frame.reader.factory.FrameInputStreamReaderFactory
 import frame.reader.factory.FrameReaderFactory
+import frame.writer.FrameWriter
 import frame.writer.factory.FrameOutputStreamWriterFactory
 import frame.writer.factory.FrameWriterFactory
 import http.Method
@@ -21,7 +22,7 @@ import java.nio.channels.SocketChannel
 import java.util.*
 
 class DefaultSessionFactory(
-    private val frameFactory: FrameFactory = DefaultFrameFactory(),
+    private val frameFactory: FrameFactory = DefaultFrameFactory(true),
     private val writerFactory: FrameWriterFactory = FrameOutputStreamWriterFactory(),
     private val readerFactory: FrameReaderFactory = FrameInputStreamReaderFactory()
 ) : SessionFactory {
@@ -94,6 +95,8 @@ class DefaultSessionFactory(
 
     companion object {
 
+        private val HEADER_REGEX: Regex = ":\\s*".toRegex()
+
         @Throws(IllegalArgumentException::class)
         private fun readRequest(channel: SocketChannel): Request {
             val socket = channel.socket()
@@ -101,11 +104,12 @@ class DefaultSessionFactory(
             val inputStreamReader = InputStreamReader(inputStream)
             val bufferedReader = BufferedReader(inputStreamReader)
 
-            val requestLine: List<String> = bufferedReader.readLine().split("\\s+")
+            val requestLine: List<String> = bufferedReader.readLine().split("\\s+".toRegex())
             val headers: MutableMap<String, String> = hashMapOf()
             var header: String = bufferedReader.readLine()
             while(header.isNotEmpty()) {
-                val h: List<String> = header.split(":\\s+", limit = 2)
+                println(header)
+                val h: List<String> = header.split(HEADER_REGEX, 2)
                 headers[h[0]] = h[1]
                 header = bufferedReader.readLine()
             }
@@ -114,41 +118,14 @@ class DefaultSessionFactory(
         }
 
         private fun create(requestLine: List<String>, headers: Map<String, String>): Request {
+            // TODO check http version in request. Throw exception if request is not 1.1 or greater.
+            // TODO check if method is GET. Method must be GET, otherwise throw exception.
             return Request(
-                method = Method.find(requestLine[0]),
-                uri = URI(requestLine[1]),
-                path = requestLine[1].substring(0, requestLine[1].lastIndexOf("/")+1),
+                method = Method.find(requestLine[0]),//.also { if (it != Method.GET) throw WebsocketException },
+                path = requestLine[1],
+                version = requestLine[2],
                 headers = headers
             )
         }
-
-        /*
-        @Throws(IllegalArgumentException::class)
-        private fun create(request: ByteArray): Request = create(String(request))
-
-        @Throws(IllegalArgumentException::class)
-        private fun create(request: String): Request = create(request.split("\\r?\\n"))
-
-        @Throws(IllegalArgumentException::class)
-        private fun create(lines: List<String>): Request {
-            val requestLines: List<String> = lines[0].split("\\s+")
-            val headers = mutableMapOf<String, String>()
-            for (i in 1 until lines.size) {
-                val header: List<String> = lines[i].split(Regex(":\\s+"), 2)
-                headers[header[0]] = header[1]
-            }
-
-            return Request(
-                uri = URI(requestLines[1]),
-                path = requestLines[1].substring(0, requestLines[1].lastIndexOf("/") + 1),
-                method = Method.valueOf(requestLines[0].toUpperCase()),
-                headers = mutableMapOf<String, String>().apply {
-                    for (i in 1 until lines.size) {
-                        val header: List<String> = lines[i].split(Regex(":\\s+"), 2)
-                        put(header[0], header[1])
-                    }
-                })
-        }
-         */
     }
 }

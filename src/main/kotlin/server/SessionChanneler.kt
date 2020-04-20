@@ -42,19 +42,17 @@ class SessionChanneler(
     }
 
     override fun run() {
+        println("Channeler is now running...")
         while (isRunning) {
-            if (selector.select() > 0) {
+            if (selector.selectNow() > 0) {
                 val selectedKeys: Set<SelectionKey> = selector.selectedKeys()
                 selectedKeys.forEach { key ->
+                    println("Now checking selected key -> $key")
                     when {
                         key.isAcceptable -> {
-                            // TODO check if nonblocking is required
-//                            val channel = serverSocketChannel.accept().apply {
-//                                configureBlocking(false)
-//                            }
-                            val channel = serverSocketChannel.accept()
+                            val channel = serverSocketChannel.accept() // Can apply non blocking if using Buffer.
                             val session = factory.create(channel)
-                            executor.submit(Handshake(handler, selector, session, key))
+                            executor.submit(Handshake(handler, session, key))
                         }
 
                         key.isReadable -> {
@@ -69,9 +67,11 @@ class SessionChanneler(
                             }
                         }
                     }
+                    println("isRunning -> $isRunning")
                 }
             }
         }
+        println("No longer running...")
     }
 
 
@@ -97,7 +97,6 @@ class SessionChanneler(
      */
     private inner class Handshake(
         private val handler: SessionEventHandler,
-        private val selector: Selector,
         private val session: Session,
         private val key: SelectionKey
     ) : Runnable {
@@ -107,8 +106,8 @@ class SessionChanneler(
                 val doHandshake = handler.onConnection(session)
                 if (doHandshake) {
                     session.handshake()
+                    session.channel.register(key.selector(), SelectionKey.OP_READ)
                     key.attach(session)
-                    session.channel.register(selector, SelectionKey.OP_READ)
                 }
             } catch (ex: WebsocketException) {
                 handler.onError(session, ex)

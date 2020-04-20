@@ -1,19 +1,17 @@
 package http
 
-import java.net.URI
+data class Request(private val headers: Headers) {
 
-data class Request(
-    val uri: URI,
-    val path: String,
-    val method: Method,
-    private val headers: Map<String, String>
-) {
-    val isWebSocketUpgrade: Boolean
-        get() = headers["Upgrade"] == "Websocket"
-                && headers["Connection"] == "Upgrade"
-                && headers["Sec-WebSocket-Version"] == "13"
+    constructor(path: String, method: Method, version: String, headers: Map<String, String>):
+            this(Headers(path, method, version, headers))
 
-    val webSocketKey: String? = headers["Sec-WebSocket-Key"]
+    val isWebSocketUpgrade: Boolean =
+        headers.getHeader("Upgrade") == "Websocket"
+            && headers.getHeader("Connection") == "Upgrade"
+            && headers.getHeader("Sec-WebSocket-Version") == "13"
 
-    fun getHeader(key: String): String? = headers[key]
+    val webSocketKey: String?
+        get() = headers.getHeader("Sec-WebSocket-Key")
+
+    fun getHeader(key: String): String? = headers.getHeader(key)
 }
