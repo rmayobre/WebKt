@@ -2,7 +2,6 @@ package server.session.factory
 
 import ClosureCode
 import exception.HandshakeException
-import exception.WebsocketException
 import frame.Frame
 import frame.factory.DefaultFrameFactory
 import frame.factory.FrameFactory
@@ -17,7 +16,6 @@ import http.Request
 import server.session.Session
 import java.io.BufferedReader
 import java.io.InputStreamReader
-import java.net.URI
 import java.nio.channels.SocketChannel
 import java.util.*
 

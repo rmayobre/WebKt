@@ -1,6 +1,6 @@
 package http
 
-
+@Deprecated("remove")
 data class Headers(
     val path: String,
     val method: Method,

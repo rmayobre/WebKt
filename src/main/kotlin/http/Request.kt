@@ -1,17 +1,19 @@
 package http
 
-data class Request(private val headers: Headers) {
-
-    constructor(path: String, method: Method, version: String, headers: Map<String, String>):
-            this(Headers(path, method, version, headers))
+data class Request(
+    val path: String,
+    val method: Method,
+    val version: String,
+    private val headers: Map<String, String>
+) {
 
     val isWebSocketUpgrade: Boolean =
-        headers.getHeader("Upgrade") == "Websocket"
-            && headers.getHeader("Connection") == "Upgrade"
-            && headers.getHeader("Sec-WebSocket-Version") == "13"
+        headers["Upgrade"] == "Websocket"
+            && headers["Connection"] == "Upgrade"
+            && headers["Sec-WebSocket-Version"] == "13"
 
     val webSocketKey: String?
-        get() = headers.getHeader("Sec-WebSocket-Key")
+        get() = headers["Sec-WebSocket-Key"]
 
-    fun getHeader(key: String): String? = headers.getHeader(key)
+    fun getHeader(key: String): String? = headers[key]
 }
