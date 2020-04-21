@@ -31,7 +31,7 @@ interface Session {
 
     /** Shake hands with client connection. */
     @Throws(HandshakeException::class)
-    fun handshake()
+    fun handshake(headers: Map<String, String>? = null)
 
     /** Send a text message to client. */
     @Throws(WebsocketException::class)

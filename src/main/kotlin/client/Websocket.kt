@@ -1,6 +1,7 @@
 package client
 
 import ClosureCode
+import Handshake
 import exception.WebsocketException
 import frame.factory.DefaultFrameFactory
 import frame.factory.FrameFactory
@@ -39,7 +40,7 @@ open class Websocket(
         mutableSetOf())
 
     @Throws(IOException::class)
-    fun connect() {
+    fun connect(handshake: Handshake) {
         socket = Socket().apply {
             connect(address)
         }.also {
@@ -51,7 +52,7 @@ open class Websocket(
                 this)
             reader = WebsocketReader(readerFactory.create(it), this)
         }
-        TODO("Send handshake request.")
+        writer.handshake(handshake)
     }
 
     fun send(message: String) {
@@ -132,7 +133,7 @@ open class Websocket(
         fun addListener(listener: WebsocketListener) = apply { listeners.add(listener) }
 
         @Throws(IOException::class)
-        fun buildAndConnect(): Websocket = build().also { it.connect() }
+        fun build(handshake: Handshake): Websocket = build().also { it.connect(handshake) }
 
         fun build(): Websocket = Websocket(address, frameFactory, readerFactory, writerFactory, listeners)
     }

@@ -60,9 +60,16 @@ class DefaultSessionFactory(
             }
         }
 
-        override fun handshake() {
+        override fun handshake(headers: Map<String, String>?) {
             request.webSocketKey?.let { key ->
-                writer.writeHandshake(key)
+                val handshake = Handshake.Server(key).apply {
+                    headers?.let {
+                        it.forEach { (key, value) ->
+                            addHeader(key, value)
+                        }
+                    }
+                }.build()
+                writer.write(handshake)
             } ?: throw HandshakeException("Request did not provided a key.")
         }
 

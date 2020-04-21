@@ -1,6 +1,5 @@
 import exception.HandshakeException
 import exception.WebsocketException
-import frame.writer.FrameOutputStreamWriter
 import http.HttpStatus
 import http.Method
 import java.security.MessageDigest
@@ -28,7 +27,7 @@ data class Handshake(
     }
 
     /** Builder class for client-side Handshake request. */
-    inner class Client(host: String, private val path: String, key: String) {
+    class Client(host: String, private val path: String, key: String) {
 
         private val headers = mutableMapOf<String, String>()
 
@@ -54,7 +53,7 @@ data class Handshake(
     }
 
     /** Builder class for server-side Handshake response. */
-    inner class Server(key: String) {
+    class Server(key: String) {
 
         private val headers = mutableMapOf<String, String>()
 

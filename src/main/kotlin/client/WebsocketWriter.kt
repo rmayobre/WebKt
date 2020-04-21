@@ -1,6 +1,7 @@
 package client
 
 import ClosureCode
+import Handshake
 import exception.WebsocketException
 import exception.WebsocketIOException
 import frame.Frame
@@ -22,11 +23,10 @@ internal class WebsocketWriter(
     var isClosed: Boolean = false
         private set
 
-    fun handshake() {
+    fun handshake(handshake: Handshake) {
         if (!isClosed) {
-            // Handle handshake
+            writer.write(handshake)
         }
-        TODO("Implement client-side handshake request")
     }
 
     fun send(message: String) {
