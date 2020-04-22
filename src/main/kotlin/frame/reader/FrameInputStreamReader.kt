@@ -16,7 +16,7 @@ class FrameInputStreamReader(
      * are fragmented. The reason is to prevent an overload on the system.
      * @see <a href="https://tools.ietf.org/html/rfc6455#section-10.4">RFC 6455, Section 10.4 (Defined Status Codes)</a>
      */
-    private val frameSizeLimit: Int
+    private val maxFrameSize: Int
 ) : FrameReader {
 
     override fun read(requiresMask: Boolean): Frame {
@@ -27,8 +27,8 @@ class FrameInputStreamReader(
             do {
                 val frame = read(input.read(), input.read(), requiresMask)
                 totalSize += frame.length
-                if (totalSize > frameSizeLimit) {
-                    throw LargeFrameException(frameSizeLimit)
+                if (totalSize > maxFrameSize) {
+                    throw LargeFrameException(maxFrameSize)
                 }
                 last.next = frame
                 last = frame
@@ -41,22 +41,22 @@ class FrameInputStreamReader(
 
     @Throws(MissingMaskFragmentException::class, IOException::class)
     private fun read(first: Int, second: Int, requiresMask: Boolean): Frame {
-        val fragment = Frame(first, second)
-        if (fragment.length == PAYLOAD_LENGTH_16) {
-            fragment.extendedPayloadLength(TWO_BYTE_FRAME)
-        } else if (fragment.length == PAYLOAD_LENGTH_64) {
-            fragment.extendedPayloadLength(EIGHT_BYTE_FRAME)
+        val frame = Frame(first, second)
+        if (frame.length == PAYLOAD_LENGTH_16) {
+            frame.extendedPayloadLength(TWO_BYTE_FRAME_LENGTH)
+        } else if (frame.length == PAYLOAD_LENGTH_64) {
+            frame.extendedPayloadLength(EIGHT_BYTE_FRAME_LENGTH)
         }
         if (requiresMask) {
-            if (fragment.isMasked) {
-                fragment.readFromPayloadWithMask()
+            if (frame.isMasked) {
+                frame.readFromPayloadWithMask()
             } else {
                 throw MissingMaskFragmentException()
             }
         } else {
-            fragment.readFromPayload()
+            frame.readFromPayload()
         }
-        return fragment
+        return frame
     }
 
     private fun Frame.extendedPayloadLength(size: Int) {
@@ -92,24 +92,27 @@ class FrameInputStreamReader(
     @Synchronized override fun close() = input.close()
 
     companion object {
+
         /** Number of masking bytes provided from client. */
         private const val MASK_BYTES = 0x4
-	    /** Number of bits required to shift octet 1 into the lowest 8 bits. */
-        private const val OCTET_ONE = 8
+
         /**
          * Payload length indicating that the payload's true length is a
          * yet-to-be-provided unsigned 16-bit integer.
          */
         private const val PAYLOAD_LENGTH_16 = 0x7E
+
         /**
          * Payload length indicating that the payload's true length is a
          * yet-to-be-provided unsigned 64-bit integer (MSB = 0).
          */
         private const val PAYLOAD_LENGTH_64 = 0x7F
 
-        private const val TWO_BYTE_FRAME = 0x2
+        /** S */
+        private const val TWO_BYTE_FRAME_LENGTH = 0x2
 
-        private const val EIGHT_BYTE_FRAME = 0x8
+        private const val EIGHT_BYTE_FRAME_LENGTH = 0x8
+
 
         /** Construct a dummy Frame. Helps creating the singly linked list. */
         private fun dummyFrame() = Frame(

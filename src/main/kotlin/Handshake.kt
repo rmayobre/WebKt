@@ -2,6 +2,7 @@ import exception.HandshakeException
 import exception.WebsocketException
 import http.HttpStatus
 import http.Method
+import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import java.util.*

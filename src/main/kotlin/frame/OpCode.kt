@@ -45,7 +45,6 @@ enum class OpCode(val code: Byte) {
             CLOSE.code -> CLOSE
             PING.code -> PING
             PONG.code -> PONG
-            CONTINUATION.code -> CONTINUATION
             else -> throw InvalidFrameException()
         }
     }

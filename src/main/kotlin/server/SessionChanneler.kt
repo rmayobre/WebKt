@@ -1,5 +1,6 @@
 package server
 
+import ClosureCode
 import exception.InvalidFrameException
 import exception.NoUTFException
 import exception.WebsocketException
@@ -14,6 +15,7 @@ import java.nio.ByteBuffer
 import java.nio.channels.SelectionKey
 import java.nio.channels.Selector
 import java.nio.channels.ServerSocketChannel
+import java.nio.channels.SocketChannel
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
 
@@ -44,30 +46,40 @@ class SessionChanneler(
     override fun run() {
         println("Channeler is now running...")
         while (isRunning) {
-            if (selector.selectNow() > 0) {
+            if (selector.select() > 0) {
                 val selectedKeys: Set<SelectionKey> = selector.selectedKeys()
                 selectedKeys.forEach { key ->
-                    println("Now checking selected key -> $key")
-                    when {
-                        key.isAcceptable -> {
-                            val channel = serverSocketChannel.accept() // Can apply non blocking if using Buffer.
-                            val session = factory.create(channel)
-                            executor.submit(Handshake(handler, session, key))
-                        }
+                    if (key.isValid) {
+                        when {
+                            key.isAcceptable -> {
+                                serverSocketChannel.accept()?.apply {
+                                    configureBlocking(false)
+                                    socket().apply {
+                                        tcpNoDelay = false
+                                        keepAlive = true
+                                    }
+                                    register(selector, SelectionKey.OP_READ or SelectionKey.OP_WRITE)
+                                }
+                            }
 
-                        key.isReadable -> {
-                            val session = key.attachment() as Session
-                            executor.submit(ReadTransmission(handler, session))
-                        }
+                            key.isReadable -> {
+                                if (key.attachment() == null) {
+                                    val channel: SocketChannel = key.channel() as SocketChannel
+                                    executor.submit(Handshake(handler, factory, channel, key))
+                                } else {
+                                    val session: Session = key.attachment() as Session
+                                    executor.submit(ReadTransmission(handler, session))
+                                }
+                            }
 
-                        key.isWritable -> {
-                            val session = key.attachment() as Session
-                            if (session.isWriteable) {
-                                executor.submit(WriteTransmission(handler, session))
+                            key.isWritable -> {
+                                val session = key.attachment() as Session
+                                if (session.isWriteable) {
+                                    executor.submit(WriteTransmission(handler, session))
+                                }
                             }
                         }
                     }
-                    println("isRunning -> $isRunning")
                 }
             }
         }
@@ -97,20 +109,24 @@ class SessionChanneler(
      */
     private inner class Handshake(
         private val handler: SessionEventHandler,
-        private val session: Session,
+        private val factory: SessionFactory,
+        private val channel: SocketChannel,
         private val key: SelectionKey
     ) : Runnable {
 
         override fun run() {
             try {
-                val doHandshake = handler.onConnection(session)
-                if (doHandshake) {
-                    session.handshake()
-                    session.channel.register(key.selector(), SelectionKey.OP_READ)
+                val session = factory.create(channel)
+                try {
                     key.attach(session)
+                    handler.onConnection(session)
+                } catch (ex: WebsocketException) {
+                    handler.onError(session, ex)
                 }
-            } catch (ex: WebsocketException) {
-                handler.onError(session, ex)
+            } catch (ex: Exception) {
+                handler.onError(ex)
+                channel.close()
+                key.cancel()
             }
         }
     }
@@ -136,6 +152,8 @@ class SessionChanneler(
                 }
             } catch (ex: WebsocketException) {
                 handler.onError(session, ex)
+            } catch (ex: Exception) {
+                handler.onError(ex)
             }
         }
 
