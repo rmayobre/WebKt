@@ -13,3 +13,7 @@ Websocket implementation for Kotlin following [RFC 6455](https://tools.ietf.org/
 # Future Features
 * Android support - Handshake encoding does not work at the moment.
 * WSS support
+* Wiki page - Detailed instructions on how to use WebKt
+
+# Dependencies
+Java 8 - Everything is written with native libraries
