@@ -30,7 +30,7 @@ class FrameBufferReader(
             val head = dummyFrame()
             var last: Frame = head
             do {
-                if (channel.read(buffer) != -1) {
+                if (channel.read(buffer) == -1) {
                     throw InvalidFrameException("Could not read frame from channel.")
                 }
 
@@ -67,7 +67,7 @@ class FrameBufferReader(
     private fun buildFrame(): Frame {
         try {
             // A frame requires 8 bytes (64 bits) to construct it's object.
-            val bytes = ByteBuffer.allocate(8)
+            val bytes = ByteBuffer.allocate(2)
             while (bytes.hasRemaining()) {
                 if (!buffer.hasRemaining()) {
                     buffer.clear()
@@ -76,7 +76,8 @@ class FrameBufferReader(
                 }
                 bytes.put(buffer.get())
             }
-            return Frame(bytes.int, bytes.int)
+            bytes.flip()
+            return Frame(bytes.get(), bytes.get())
         } catch (ex: IOException) {
             throw WebsocketIOException("Could not read from SocketChannel.", ex)
         }
@@ -166,11 +167,9 @@ class FrameBufferReader(
          */
         private const val PAYLOAD_LENGTH_64 = 0x7F
 
-        /** S */
         private const val TWO_BYTE_FRAME_LENGTH = 0x2
 
         private const val EIGHT_BYTE_FRAME_LENGTH = 0x8
-
 
         /** Construct a dummy Frame. Helps creating the singly linked list. */
         private fun dummyFrame() = Frame(

@@ -58,6 +58,9 @@ data class Frame(
         length = second and 0x7F,
         payload = ByteArrayOutputStream())
 
+    @Throws(InvalidFrameException::class)
+    constructor(b0: Byte, b1: Byte): this(b0.toInt(), b1.toInt())
+
     init {
         if (isControlFrame) {
             if (!isFin)

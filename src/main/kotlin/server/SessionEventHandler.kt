@@ -3,11 +3,12 @@ package server
 import ClosureCode
 import exception.WebsocketException
 import server.session.Session
+import java.lang.Exception
 
 interface SessionEventHandler {
     /** Newly connected Session. */
     @Throws(WebsocketException::class)
-    fun onConnection(session: Session): Boolean
+    fun onConnection(session: Session)
 
     /** Incoming message from Session. */
     @Throws(WebsocketException::class)
@@ -32,4 +33,11 @@ interface SessionEventHandler {
     /** An error occurred with Session. */
     @Throws(WebsocketException::class)
     fun onError(session: Session, ex: WebsocketException)
+
+    /** An unexpected error occurred with provided Session. */
+    @Throws(WebsocketException::class)
+    fun onError(session: Session, ex: Exception)
+
+    /** An unexpected error occurred */
+    fun onError(ex: Exception)
 }

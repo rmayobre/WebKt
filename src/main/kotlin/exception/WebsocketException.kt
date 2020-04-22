@@ -29,7 +29,7 @@ open class WebsocketException : Exception {
  * @see ClosureCode.POLICY_VALIDATION
  */
 class InvalidFrameException: WebsocketException{
-    constructor() : super("Invalid frame.OpCode found in frame.", ClosureCode.POLICY_VALIDATION)
+    constructor() : super("Invalid OpCode found in frame.", ClosureCode.POLICY_VALIDATION)
     constructor(message: String) : super(message, ClosureCode.POLICY_VALIDATION)
 }
 
@@ -77,4 +77,10 @@ class InternalErrorException : WebsocketException {
     constructor(message: String) : super(message, ClosureCode.INTERNAL_ERROR)
     constructor(throwable: Throwable) : super(throwable, ClosureCode.INTERNAL_ERROR)
     constructor(message: String, throwable: Throwable) : super(message, throwable, ClosureCode.INTERNAL_ERROR)
+}
+
+/** This exception is thrown without a Session because this exception can only occur before a Session has been created. */
+class BadRequestException : WebsocketException {
+    constructor() : super("Request could not be determined from endpoint.", ClosureCode.PROTOCOL_ERROR)
+    constructor(message: String) : super(message, ClosureCode.PROTOCOL_ERROR)
 }

@@ -10,7 +10,7 @@ import http.Request
 import java.nio.channels.SocketChannel
 import java.util.*
 
-class DefaultSession(
+class BufferedSession(
     override val request: Request,
     override val channel: SocketChannel,
     private val factory: FrameFactory,
