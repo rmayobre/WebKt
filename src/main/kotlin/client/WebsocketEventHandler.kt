@@ -4,7 +4,7 @@ import ClosureCode
 import exception.WebsocketException
 
 interface WebsocketEventHandler {
-    fun onOpen(/*response: HandshakeData*/)
+    fun onOpen()
     fun onMessage(message: String)
     fun onMessage(data: ByteArray)
     fun onPing(data: ByteArray)

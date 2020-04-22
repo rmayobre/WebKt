@@ -16,7 +16,7 @@ data class Frame(
     /** Length of data in fragment. */
     var length: Int,
     /** frame.Fragment's data. */
-    val payload: ByteArrayOutputStream // TODO change to ByteBuffer
+    val payload: ByteArrayOutputStream
 
 ) {
     var next: Frame? = null
@@ -74,7 +74,6 @@ data class Frame(
         }
     }
 
-    // TODO clean up constants
     companion object {
         /** Binary mask to extract the masking flag bit of a WebSocket frame. */
         private const val MASK = 0x80

@@ -16,7 +16,7 @@ interface Session {
     val request: Request
 
     /** Has the session been closed, or received a closing frame from client? */
-    val isClosed: Boolean // TODO required?
+    val isClosed: Boolean
 
     /** Does the session have anything to write? */
     val isWriteable: Boolean

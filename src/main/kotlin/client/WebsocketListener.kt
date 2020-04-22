@@ -2,10 +2,9 @@ package client
 
 import ClosureCode
 import exception.WebsocketException
-//import HandshakeData
 
 interface WebsocketListener {
-    fun onOpen(websocket: Websocket/*response: HandshakeData*/)
+    fun onOpen(websocket: Websocket)
     fun onMessage(websocket: Websocket, message: String)
     fun onMessage(websocket: Websocket, data: ByteArray)
     fun onPing(websocket: Websocket, data: ByteArray)

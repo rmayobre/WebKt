@@ -66,7 +66,6 @@ class FrameBufferReader(
     @Throws(WebsocketIOException::class)
     private fun buildFrame(): Frame {
         try {
-            // A frame requires 8 bytes (64 bits) to construct it's object.
             val bytes = ByteBuffer.allocate(2)
             while (bytes.hasRemaining()) {
                 if (!buffer.hasRemaining()) {
@@ -84,7 +83,6 @@ class FrameBufferReader(
     }
 
     private fun Frame.writePayload(requiresMask: Boolean) {
-        // Check if the payload has an extend length.
         if (length == PAYLOAD_LENGTH_16) {
             extendedPayloadLength(TWO_BYTE_FRAME_LENGTH)
         } else if (length == PAYLOAD_LENGTH_64) {

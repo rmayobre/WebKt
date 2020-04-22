@@ -37,7 +37,6 @@ class InvalidFrameException: WebsocketException{
  * Something went wrong with a Frame's fragmentation.
  * @see <a href="https://tools.ietf.org/html/rfc6455#section-5.4">RFC 6455 - Fragmentation</a>
  */
-// TODO throw this inside the readers.
 class BadFragmentException: WebsocketException("A malformed fragment was found.", ClosureCode.PROTOCOL_ERROR)
 
 /**

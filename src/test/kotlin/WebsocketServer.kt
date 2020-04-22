@@ -34,7 +34,7 @@ open class WebsocketServer(
         channeler.start()
     }
 
-    fun stop() { // TODO notify sessions of closure
+    fun stop() {
         println("Now shutting down server...")
         channeler.close()
     }

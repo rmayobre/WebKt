@@ -2,7 +2,6 @@ import exception.HandshakeException
 import exception.WebsocketException
 import http.HttpStatus
 import http.Method
-import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import java.util.*
@@ -101,7 +100,6 @@ data class Handshake(
                 val message: MessageDigest = MessageDigest.getInstance("SHA-1")
                 val magicString: String = this + MAGIC_KEY
                 message.update(magicString.toByteArray(), 0, magicString.length)
-                // TODO create custom encoder compatible with android and java
                 return Base64.getEncoder().encodeToString(message.digest())
                 // Android encoder
 //            return Base64.encodeToString(message.digest(), Base64.DEFAULT)
