@@ -34,9 +34,10 @@ class InvalidFrameException: WebsocketException{
 }
 
 /**
- * Something went wrong with a frame.Frame's fragmentation.
+ * Something went wrong with a Frame's fragmentation.
  * @see <a href="https://tools.ietf.org/html/rfc6455#section-5.4">RFC 6455 - Fragmentation</a>
  */
+// TODO throw this inside the readers.
 class BadFragmentException: WebsocketException("A malformed fragment was found.", ClosureCode.PROTOCOL_ERROR)
 
 /**
@@ -46,7 +47,10 @@ class BadFragmentException: WebsocketException("A malformed fragment was found."
  * @see <a href="https://tools.ietf.org/html/rfc6455">RFC 6455</a>
  * @see ClosureCode.ABNORMAL_CLOSE
  */
-class WebsocketIOException(cause: Throwable): WebsocketException("Unexpected error occurred while reading an endpoint's stream", cause, ClosureCode.ABNORMAL_CLOSE)
+class WebsocketIOException: WebsocketException {
+    constructor(cause: Throwable) : super("Unexpected error occurred while reading an endpoint's stream", cause, ClosureCode.ABNORMAL_CLOSE)
+    constructor(message: String, cause: Throwable) : super(message, cause, ClosureCode.ABNORMAL_CLOSE)
+}
 
 /**
  * Client is required to Mask each fragment of the frame, if specified.
@@ -68,3 +72,9 @@ class NoUTFException(exception: UnsupportedEncodingException):
 
 class LargeFrameException(limit: Int):
     WebsocketException("Frame(s) exceeds size limit of $limit bytes.", ClosureCode.TOO_BIG)
+
+class InternalErrorException : WebsocketException {
+    constructor(message: String) : super(message, ClosureCode.INTERNAL_ERROR)
+    constructor(throwable: Throwable) : super(throwable, ClosureCode.INTERNAL_ERROR)
+    constructor(message: String, throwable: Throwable) : super(message, throwable, ClosureCode.INTERNAL_ERROR)
+}

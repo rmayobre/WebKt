@@ -16,7 +16,7 @@ data class Frame(
     /** Length of data in fragment. */
     var length: Int,
     /** frame.Fragment's data. */
-    val payload: ByteArrayOutputStream
+    val payload: ByteArrayOutputStream // TODO change to ByteBuffer
 
 ) {
     var next: Frame? = null
@@ -71,20 +71,24 @@ data class Frame(
         }
     }
 
+    // TODO clean up constants
     companion object {
         /** Binary mask to extract the masking flag bit of a WebSocket frame. */
         private const val MASK = 0x80
+
         /** Binary mask to extract the final fragment flag bit of a WebSocket frame. */
         private const val MASK_FINAL = 0x80
+
         /** Binary mask to extract RSV1 bit of a WebSocket frame. */
         private const val MASK_RSV1 = 0x40
+
         /** Binary mask to extract RSV2 bit of a WebSocket frame. */
         private const val MASK_RSV2 = 0x20
+
         /** Binary mask to extract RSV3 bit of a WebSocket frame. */
         private const val MASK_RSV3 = 0x10
+
         /** Binary mask to extract the opcode bits of a WebSocket frame. */
         private const val MASK_OPCODE = 0x0F
-//        /** Maximum size of Control frame. */
-//        private const val MAX_CONTROL_PAYLOAD = 0x7D
     }
 }

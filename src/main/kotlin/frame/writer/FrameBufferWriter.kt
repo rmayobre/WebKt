@@ -1,8 +1,6 @@
 package frame.writer
 
 import Handshake
-import java.io.IOException
-import java.io.OutputStream
 import exception.HandshakeException
 import exception.InvalidFrameException
 import exception.WebsocketException
@@ -12,11 +10,13 @@ import frame.OpCode
 import frame.applyMask
 import frame.toByteArray
 import java.io.ByteArrayOutputStream
+import java.io.IOException
+import java.nio.ByteBuffer
+import java.nio.channels.SocketChannel
 import java.util.*
 
-class FrameOutputStreamWriter(private val output: OutputStream) : FrameWriter {
+class FrameBufferWriter(private val channel: SocketChannel) : FrameWriter {
 
-    @Throws(WebsocketException::class)
     override fun write(frame: Frame) {
         when (frame.code) {
             OpCode.TEXT -> writeData(frame)
@@ -26,7 +26,7 @@ class FrameOutputStreamWriter(private val output: OutputStream) : FrameWriter {
             OpCode.PONG -> writeControl(frame)
             OpCode.CONTINUATION -> throw InvalidFrameException(
                 "Cannot write a continuation frame; Continuation " +
-                "frames must be attached to a data frame."
+                        "frames must be attached to a data frame."
             )
         }
     }
@@ -34,7 +34,7 @@ class FrameOutputStreamWriter(private val output: OutputStream) : FrameWriter {
     @Throws(WebsocketException::class)
     override fun write(handshake: Handshake) {
         try {
-            output.write(handshake.toByteArray())
+            channel.write(ByteBuffer.wrap(handshake.toByteArray()))
         } catch (ex: IOException) {
             throw HandshakeException(
                 "Handshake could not be complete.",
@@ -55,9 +55,9 @@ class FrameOutputStreamWriter(private val output: OutputStream) : FrameWriter {
 
             if (currentFrame.isMasked) {
                 val key = Random().nextInt()
-                output.writeMaskedPayload(frame, key)
+                channel.writeMaskedPayload(frame, key)
             } else {
-                output.writePayload(currentFrame)
+                channel.writePayload(currentFrame)
             }
         }
     }
@@ -68,9 +68,9 @@ class FrameOutputStreamWriter(private val output: OutputStream) : FrameWriter {
             throw InvalidFrameException("A control frame cannot be fragmented.")
         } else if (frame.isMasked) {
             val key = Random().nextInt()
-            output.writeMaskedPayload(frame, key)
+            channel.writeMaskedPayload(frame, key)
         } else {
-            output.writePayload(frame)
+            channel.writePayload(frame)
         }
     }
 
@@ -79,7 +79,6 @@ class FrameOutputStreamWriter(private val output: OutputStream) : FrameWriter {
     private fun writeClose(frame: Frame) {
         try {
             writeControl(frame)
-            output.close()
         } catch (ex: IOException) {
             throw WebsocketIOException(ex)
         }
@@ -126,7 +125,8 @@ class FrameOutputStreamWriter(private val output: OutputStream) : FrameWriter {
         /**
          * Write an un-masked payload.
          */
-        private fun OutputStream.writePayload(frame: Frame) {
+        @Throws(WebsocketIOException::class)
+        private fun SocketChannel.writePayload(frame: Frame) {
             val payload: ByteArray = frame.payload.toByteArray()
             when {
                 payload.size <= LENGTH_16_MIN -> {
@@ -152,7 +152,8 @@ class FrameOutputStreamWriter(private val output: OutputStream) : FrameWriter {
          * Write a masked payload.
          * @see <a href="https://tools.ietf.org/html/rfc6455#section-5.3">RFC 6455, Section 5.3 (Client-to-Server Masking)</a>
          */
-        private fun OutputStream.writeMaskedPayload(frame: Frame, key: Int) {
+        @Throws(WebsocketIOException::class)
+        private fun SocketChannel.writeMaskedPayload(frame: Frame, key: Int) {
             val payload: ByteArray = frame.payload.toByteArray()
             when {
                 payload.size <= LENGTH_16_MIN -> {
@@ -174,6 +175,18 @@ class FrameOutputStreamWriter(private val output: OutputStream) : FrameWriter {
                     write(key)
                     write(payload.applyMask(key))
                 }
+            }
+        }
+
+        @Throws(WebsocketIOException::class)
+        private fun SocketChannel.write(data: Int) = write(data.toByteArray())
+
+        @Throws(WebsocketIOException::class)
+        private fun SocketChannel.write(data: ByteArray) {
+            try {
+                write(ByteBuffer.wrap(data))
+            } catch (ex: IOException) {
+                throw WebsocketIOException("Could not send data through SocketChannel.", ex)
             }
         }
     }

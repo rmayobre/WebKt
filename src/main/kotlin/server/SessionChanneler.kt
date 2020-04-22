@@ -50,7 +50,13 @@ class SessionChanneler(
                     println("Now checking selected key -> $key")
                     when {
                         key.isAcceptable -> {
-                            val channel = serverSocketChannel.accept() // Can apply non blocking if using Buffer.
+                            val channel = serverSocketChannel.accept().apply {
+                                configureBlocking(false)
+                                socket().apply {
+                                    tcpNoDelay = true
+                                    keepAlive = true
+                                }
+                            }
                             val session = factory.create(channel)
                             executor.submit(Handshake(handler, session, key))
                         }
