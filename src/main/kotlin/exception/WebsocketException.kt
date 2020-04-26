@@ -82,4 +82,5 @@ class InternalErrorException : WebsocketException {
 class BadRequestException : WebsocketException {
     constructor() : super("Request could not be determined from endpoint.", ClosureCode.PROTOCOL_ERROR)
     constructor(message: String) : super(message, ClosureCode.PROTOCOL_ERROR)
+    constructor(message: String, cause: Throwable) : super(message, cause, ClosureCode.PROTOCOL_ERROR)
 }

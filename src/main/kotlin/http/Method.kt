@@ -11,8 +11,10 @@ enum class Method {
     CONNECT;
 
     companion object {
-        fun find(method: String): Method {
-            return valueOf(method.toUpperCase())
-        }
+//        fun find(method: String): Method {
+//            return valueOf(method.toUpperCase())
+//        }
+
+        fun find(method: String): Method? = values().find { it.name == method }
     }
 }

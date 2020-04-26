@@ -39,6 +39,15 @@ open class Websocket(
         FrameOutputStreamWriterFactory(),
         mutableSetOf())
 
+//    @Throws(IOException::class)
+//    fun connect() {
+//        connect(Handshake.Client(
+//            host = "${address.hostName}:${address.port}",
+//            path = "/",
+//            key = "" //TODO make key.
+//        ).build())
+//    }
+
     @Throws(IOException::class)
     fun connect(handshake: Handshake) {
         socket = Socket().apply {
@@ -50,9 +59,10 @@ open class Websocket(
                 frameFactory,
                 LinkedBlockingQueue(),
                 this)
+
+            writer.handshake(handshake)
             reader = WebsocketReader(readerFactory.create(it), this)
         }
-        writer.handshake(handshake)
     }
 
     fun send(message: String) {

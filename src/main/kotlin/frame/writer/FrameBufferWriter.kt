@@ -1,14 +1,15 @@
 package frame.writer
 
 import Handshake
+import applyMask
 import exception.HandshakeException
 import exception.InvalidFrameException
 import exception.WebsocketException
 import exception.WebsocketIOException
 import frame.Frame
 import frame.OpCode
-import frame.applyMask
-import frame.toByteArray
+import frame.writer.FrameBufferWriter.Companion.write
+import toByteArray
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.nio.ByteBuffer
@@ -157,9 +158,15 @@ class FrameBufferWriter(private val channel: SocketChannel) : FrameWriter {
             val payload: ByteArray = frame.payload.toByteArray()
             when {
                 payload.size <= LENGTH_16_MIN -> {
-                    write(payload.size)
-                    write(key)
-                    write(payload.applyMask(key))
+                    val output = ByteArrayOutputStream().apply {
+                        write(payload.size)
+                        write(key)
+                        write(payload.applyMask(key))
+                    }
+                    write(output.toByteArray())
+//                    write(payload.size)
+//                    write(key)
+//                    write(payload.applyMask(key))
                 }
                 payload.size <= LENGTH_64_MIN -> {
                     write(LENGTH_16)

@@ -49,6 +49,7 @@ class SessionChanneler(
             if (selector.select() > 0) {
                 val selectedKeys: Set<SelectionKey> = selector.selectedKeys()
                 selectedKeys.forEach { key ->
+                    key.interestOps()
                     if (key.isValid) {
                         when {
                             key.isAcceptable -> {
@@ -65,17 +66,10 @@ class SessionChanneler(
                             key.isReadable -> {
                                 if (key.attachment() == null) {
                                     val channel: SocketChannel = key.channel() as SocketChannel
-                                    executor.submit(Handshake(handler, factory, channel, key))
+                                    executor.submit(Handshake(channel, key))
                                 } else {
                                     val session: Session = key.attachment() as Session
-                                    executor.submit(ReadTransmission(handler, session))
-                                }
-                            }
-
-                            key.isWritable -> {
-                                val session = key.attachment() as Session
-                                if (session.isWriteable) {
-                                    executor.submit(WriteTransmission(handler, session))
+                                    executor.submit(ReadTransmission(session))
                                 }
                             }
                         }
@@ -108,15 +102,13 @@ class SessionChanneler(
      * the server.SessionEventHandler is responsible for closing the Session.
      */
     private inner class Handshake(
-        private val handler: SessionEventHandler,
-        private val factory: SessionFactory,
         private val channel: SocketChannel,
         private val key: SelectionKey
     ) : Runnable {
 
         override fun run() {
             try {
-                val session = factory.create(channel)
+                val session = factory.create(channel, executor)
                 try {
                     key.attach(session)
                     handler.onConnection(session)
@@ -132,7 +124,6 @@ class SessionChanneler(
     }
 
     private inner class ReadTransmission(
-        private val handler: SessionEventHandler,
         private val session: Session
     ) : Runnable {
         override fun run() {
@@ -177,8 +168,13 @@ class SessionChanneler(
             if (frame.length == 0) {
                 handler.onClose(session, ClosureCode.NO_STATUS)
             } else {
-                val code = ClosureCode.find(ByteBuffer.wrap(frame.data).int)
-                handler.onClose(session, code)
+                // TODO Buffer under flow exception thrown here on page refresh.
+                if (frame.data.isEmpty()) {
+                    handler.onClose(session, ClosureCode.NO_STATUS)
+                } else {
+                    val code = ClosureCode.find(ByteBuffer.wrap(frame.data).int)
+                    handler.onClose(session, code)
+                }
             }
         }
 
@@ -193,18 +189,18 @@ class SessionChanneler(
         }
     }
 
-    private inner class WriteTransmission(
-        private val handler: SessionEventHandler,
-        private val session: Session
-    ) : Runnable {
-        override fun run() {
-            try {
-                session.write()
-            } catch (ex: WebsocketException) {
-                handler.onError(session, ex)
-            }
-        }
-    }
+//    private inner class WriteTransmission(
+//        private val handler: SessionEventHandler,
+//        private val session: Session
+//    ) : Runnable {
+//        override fun run() {
+//            try {
+//                session.write()
+//            } catch (ex: WebsocketException) {
+//                handler.onError(session, ex)
+//            }
+//        }
+//    }
 
     companion object {
         /** The executor will wait 60 seconds for it's tasks to finish before termination. */

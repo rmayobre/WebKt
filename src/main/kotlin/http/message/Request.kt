@@ -1,11 +1,15 @@
-package http
+package http.message
+
+import http.Method
 
 data class Request(
     val path: String,
     val method: Method,
     val version: String,
-    private val headers: Map<String, String>
-) {
+    override val line: String,
+    override val headers: Map<String, String>,
+    override val body: String? = null
+): Message {
 
     val isWebSocketUpgrade: Boolean =
         headers["Upgrade"] == "Websocket"
@@ -16,4 +20,10 @@ data class Request(
         get() = headers["Sec-WebSocket-Key"]
 
     fun getHeader(key: String): String? = headers[key]
+
+    companion object {
+        private val WHITESPACE_REGEX = Regex("\\s")
+        /** Split a String into a list of Strings separated by whitespace. */
+        private fun String.splitByWhitespace() = split(WHITESPACE_REGEX)
+    }
 }

@@ -4,7 +4,7 @@ import ClosureCode
 import exception.HandshakeException
 import exception.WebsocketException
 import frame.Frame
-import http.Request
+import http.message.Request
 import java.io.IOException
 import java.nio.channels.SocketChannel
 
@@ -18,16 +18,9 @@ interface Session {
     /** Has the session been closed, or received a closing frame from client? */
     val isClosed: Boolean
 
-    /** Does the session have anything to write? */
-    val isWriteable: Boolean
-
     /** Read the next Frame from client. */
     @Throws(WebsocketException::class)
     fun read(): Frame
-
-    /** Write the next Frame to client. */
-    @Throws(WebsocketException::class)
-    fun write()
 
     /** Shake hands with client connection. */
     @Throws(HandshakeException::class)

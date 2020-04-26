@@ -18,6 +18,8 @@ internal class WebsocketReader(
     var isClosed: Boolean = false
         private set
 
+    init { start() }
+
     override fun run() {
         while (!isClosed) {
             try {

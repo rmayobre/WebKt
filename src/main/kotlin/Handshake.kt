@@ -1,11 +1,10 @@
 import exception.HandshakeException
 import exception.WebsocketException
-import http.HttpStatus
+import http.Status
 import http.Method
 import java.security.MessageDigest
-import java.security.NoSuchAlgorithmException
-import java.util.*
 
+// TODO update to use Messages.
 data class Handshake(
     private val line: String,
     private val headers: Map<String, String>
@@ -14,7 +13,7 @@ data class Handshake(
     private constructor(method: Method, path: String, version: String, headers: Map<String, String>):
             this("${method.name} $path $version", headers)
 
-    private constructor(version: String, status: HttpStatus, headers: Map<String, String>):
+    private constructor(version: String, status: Status, headers: Map<String, String>):
             this("$version ${status.code} ${status.message}", headers)
 
     fun toByteArray(): ByteArray {
@@ -57,7 +56,7 @@ data class Handshake(
 
         private val headers = mutableMapOf<String, String>()
 
-        private var status: HttpStatus = HttpStatus.SWITCH_PROTOCOL
+        private var status: Status = Status.SWITCH_PROTOCOL
 
         private var version: String = "HTTP/1.1"
 
@@ -67,7 +66,7 @@ data class Handshake(
             headers["Sec-WebSocket-Accept"] = key.toAcceptanceKey()
         }
 
-        fun setStatus(status: HttpStatus) = apply { this.status = status }
+        fun setStatus(status: Status) = apply { this.status = status }
 
         fun setVersion(version: String) = apply { this.version = version }
 
@@ -100,10 +99,8 @@ data class Handshake(
                 val message: MessageDigest = MessageDigest.getInstance("SHA-1")
                 val magicString: String = this + MAGIC_KEY
                 message.update(magicString.toByteArray(), 0, magicString.length)
-                return Base64.getEncoder().encodeToString(message.digest())
-                // Android encoder
-//            return Base64.encodeToString(message.digest(), Base64.DEFAULT)
-            } catch (ex: NoSuchAlgorithmException) {
+                return message.digest().toBase64String()
+            } catch (ex: Exception) {
                 throw HandshakeException(
                     "Could not apply SHA-1 hashing function to key.",
                     ex

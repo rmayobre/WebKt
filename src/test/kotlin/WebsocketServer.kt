@@ -1,7 +1,7 @@
 import exception.WebsocketException
 import server.SessionChanneler
 import server.SessionEventHandler
-import server.session.factory.BufferedSessionFactory
+import server.session.factory.SessionChannelFactory
 import server.session.Session
 import server.session.factory.SessionFactory
 import java.lang.Exception
@@ -21,7 +21,7 @@ open class WebsocketServer(
 
     constructor(address: InetSocketAddress) : this(
         address = address,
-        factory = BufferedSessionFactory(),
+        factory = SessionChannelFactory(),
         executor = Executors.newSingleThreadExecutor())
 
     /** Construct locally to port 80 */
@@ -47,10 +47,12 @@ open class WebsocketServer(
 
     override fun onMessage(session: Session, message: String) {
         println("Text message was received -> $message")
+        session.send(message)
     }
 
     override fun onMessage(session: Session, data: ByteArray) {
         println("Binary message  was received -> ${data.toString(Charsets.UTF_8)}")
+        session.send(data)
     }
 
     override fun onPing(session: Session, data: ByteArray?) {
@@ -66,14 +68,17 @@ open class WebsocketServer(
     }
 
     override fun onError(session: Session, ex: WebsocketException) {
-        println("An error occurred -> ${ex.message}")
+        throw ex
+//        println("An error occurred -> ${ex.message}")
     }
 
     override fun onError(session: Session, ex: Exception) {
-        println("An error occurred -> ${ex.message}")
+        throw ex
+//        println("An error occurred -> ${ex.message}")
     }
 
     override fun onError(ex: Exception) {
-        println("An error occurred -> ${ex.toString()}")
+        throw ex
+//        println("An error occurred -> ${ex.message}")
     }
 }

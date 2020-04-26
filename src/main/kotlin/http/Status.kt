@@ -1,6 +1,8 @@
 package http
 
-enum class HttpStatus(val code: Int, val message: String, private val type: Int) {
+import java.lang.IllegalArgumentException
+
+enum class Status(val code: Int, val message: String, private val type: Int) {
 
     //
     // 1xx: Information
@@ -84,6 +86,10 @@ enum class HttpStatus(val code: Int, val message: String, private val type: Int)
 
         private const val SERVER_ERROR = 5
 
-        fun find(code: Int): HttpStatus? = values().find { it.code == code }
+        fun find(message: String): Status? = values().find { it.message == message }
+
+        fun find(code: Int): Status =
+            values().find { it.code == code }
+            ?: throw IllegalArgumentException("Unrecognized HTTP status.")
     }
 }

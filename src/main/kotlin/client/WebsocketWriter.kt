@@ -23,6 +23,8 @@ internal class WebsocketWriter(
     var isClosed: Boolean = false
         private set
 
+    init { start() }
+
     fun handshake(handshake: Handshake) {
         if (!isClosed) {
             writer.write(handshake)

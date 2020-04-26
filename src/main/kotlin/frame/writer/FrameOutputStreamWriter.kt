@@ -1,6 +1,7 @@
 package frame.writer
 
 import Handshake
+import applyMask
 import java.io.IOException
 import java.io.OutputStream
 import exception.HandshakeException
@@ -9,8 +10,7 @@ import exception.WebsocketException
 import exception.WebsocketIOException
 import frame.Frame
 import frame.OpCode
-import frame.applyMask
-import frame.toByteArray
+import toByteArray
 import java.io.ByteArrayOutputStream
 import java.util.*
 

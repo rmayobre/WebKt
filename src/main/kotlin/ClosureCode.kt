@@ -105,6 +105,8 @@ enum class ClosureCode(val value: Int) {
         private val map: Map<Int, ClosureCode> = values().map { it.value to it }.toMap()
 
         /** Find ClosureCode from Integer. If code is not found, default value is UNKNOWN(-1). */
-        fun find(code: Int): ClosureCode = map[code] ?: UNKNOWN
+        fun find(code: Int): ClosureCode {
+            return map[code] ?: UNKNOWN
+        }
     }
 }
