@@ -19,6 +19,7 @@ import java.nio.channels.SocketChannel
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
 
+// TODO make into an engine design.
 class SessionChanneler(
     private val factory: SessionFactory,
     private val executor: ExecutorService,

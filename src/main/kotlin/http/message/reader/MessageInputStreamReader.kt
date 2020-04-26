@@ -9,6 +9,7 @@ import http.message.Response
 import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader
+import java.lang.StringBuilder
 
 class MessageInputStreamReader(
     private val input: InputStream
@@ -27,7 +28,16 @@ class MessageInputStreamReader(
             line = bufferedReader.readLine()
         }
 
-        // TODO read the body of the request.
+        val length = headers["Content-Length"]?.toIntOrNull() ?: 0
+        if (length > 0) {
+            val bodyBuilder = StringBuilder()
+            line = bufferedReader.readLine()
+            while (line.isNotEmpty()) {
+                bodyBuilder.append(line)
+                line = bufferedReader.readLine()
+            }
+            return build(startLine, headers, bodyBuilder.toString())
+        }
 
         return build(startLine, headers)
     }

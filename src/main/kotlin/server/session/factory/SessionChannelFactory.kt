@@ -51,7 +51,7 @@ class SessionChannelFactory(
         val request = try {
             val requestLines = requestLine.split(Regex("\\s"))
             Request(
-                method = Method.find(requestLines[0]),
+                method = Method.find(requestLines[0]) ?: throw BadRequestException("Unsupported method type."),
                 path = requestLines[1],
                 version = requestLines[2],
                 line = requestLine,
