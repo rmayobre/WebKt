@@ -10,7 +10,7 @@ import frame.reader.FrameReader
 import java.io.Closeable
 import java.nio.ByteBuffer
 
-internal class WebsocketReader(
+class WebsocketReader(
     private val reader: FrameReader,
     private val handler: WebsocketEventHandler
 ) : Thread(), Closeable {

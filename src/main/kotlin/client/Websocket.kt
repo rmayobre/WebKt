@@ -39,14 +39,11 @@ open class Websocket(
         FrameOutputStreamWriterFactory(),
         mutableSetOf())
 
-//    @Throws(IOException::class)
-//    fun connect() {
-//        connect(Handshake.Client(
-//            host = "${address.hostName}:${address.port}",
-//            path = "/",
-//            key = "" //TODO make key.
-//        ).build())
-//    }
+    @Throws(IOException::class)
+    fun connect(path: String = "/") = connect(Handshake.default(
+        host = "${address.hostName}:${address.port}",
+        path = path,
+        key = "")) // TODO build key.
 
     @Throws(IOException::class)
     fun connect(handshake: Handshake) {
@@ -60,8 +57,13 @@ open class Websocket(
                 LinkedBlockingQueue(),
                 this)
 
-            writer.handshake(handshake)
-            reader = WebsocketReader(readerFactory.create(it), this)
+            try {
+                writer.handshake(handshake)
+                reader = WebsocketReader(readerFactory.create(it), this)
+            } catch (ex: WebsocketException) {
+                close(ex.code)
+                onError(ex)
+            }
         }
     }
 
@@ -146,5 +148,16 @@ open class Websocket(
         fun build(handshake: Handshake): Websocket = build().also { it.connect(handshake) }
 
         fun build(): Websocket = Websocket(address, frameFactory, readerFactory, writerFactory, listeners)
+    }
+
+    companion object {
+        private inline fun Websocket.safeCall(block: () -> Unit) {
+            try {
+                return block()
+            } catch (ex: WebsocketException) {
+                close(ex.code)
+                onError(ex)
+            }
+        }
     }
 }

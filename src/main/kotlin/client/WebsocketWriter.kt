@@ -8,13 +8,18 @@ import frame.Frame
 import frame.OpCode
 import frame.factory.FrameFactory
 import frame.writer.FrameWriter
+import http.message.Response
+import http.message.reader.MessageReader
+import http.message.writer.MessageWriter
 import java.io.ByteArrayOutputStream
 import java.io.Closeable
 import java.nio.ByteBuffer
 import java.util.concurrent.BlockingQueue
 
-internal class WebsocketWriter(
+class WebsocketWriter(
     private val writer: FrameWriter,
+    private val messageWriter: MessageWriter,
+    private val messageReader: MessageReader,
     private val factory: FrameFactory,
     private val queue: BlockingQueue<Frame>,
     private val handler: WebsocketEventHandler
@@ -23,12 +28,36 @@ internal class WebsocketWriter(
     var isClosed: Boolean = false
         private set
 
-    init { start() }
-
-    fun handshake(handshake: Handshake) {
-        if (!isClosed) {
-            writer.write(handshake)
+    /*
+        @Throws(HandshakeException::class)
+    override fun write(handshake: Handshake) {
+        try {
+            output.write(handshake.toByteArray())
+        } catch (ex: IOException) {
+            throw HandshakeException(
+                "Handshake could not be complete.",
+                ex
+            )
         }
+    }
+
+        @Throws(WebsocketException::class)
+    override fun write(handshake: Handshake) {
+        try {
+            channel.write(ByteBuffer.wrap(handshake.toByteArray()))
+        } catch (ex: IOException) {
+            throw HandshakeException(
+                "Handshake could not be complete.",
+                ex
+            )
+        }
+    }
+     */
+
+    @Throws(WebsocketException::class)
+    fun handshake(handshake: Handshake): Response {
+        messageWriter.write(handshake)
+        return messageReader.read() as Response
     }
 
     fun send(message: String) {

@@ -2,7 +2,11 @@ package http
 
 import java.lang.IllegalArgumentException
 
-enum class Status(val code: Int, val message: String, private val type: Int) {
+enum class Status(
+    val code: Int,
+    val message: String,
+    private val type: Int
+) {
 
     //
     // 1xx: Information

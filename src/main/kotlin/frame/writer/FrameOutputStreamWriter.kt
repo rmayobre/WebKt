@@ -32,18 +32,6 @@ class FrameOutputStreamWriter(private val output: OutputStream) : FrameWriter {
     }
 
     @Throws(WebsocketException::class)
-    override fun write(handshake: Handshake) {
-        try {
-            output.write(handshake.toByteArray())
-        } catch (ex: IOException) {
-            throw HandshakeException(
-                "Handshake could not be complete.",
-                ex
-            )
-        }
-    }
-
-    @Throws(WebsocketException::class)
     private fun writeData(frame: Frame) {
         var currentFrame = dummyFrame(frame)
         while (currentFrame.next != null) {
@@ -75,7 +63,7 @@ class FrameOutputStreamWriter(private val output: OutputStream) : FrameWriter {
     }
 
     @Synchronized
-    @Throws(WebsocketException::class)
+    @Throws(WebsocketIOException::class)
     private fun writeClose(frame: Frame) {
         try {
             writeControl(frame)
@@ -135,13 +123,13 @@ class FrameOutputStreamWriter(private val output: OutputStream) : FrameWriter {
                 }
                 payload.size <= LENGTH_64_MIN -> {
                     write(LENGTH_16)
-                    val lenBytes = (payload.size.toShort()).toByteArray()
+                    val lenBytes = payload.size.toShort().toByteArray()
                     write(lenBytes)
                     write(payload)
                 }
                 else -> {
                     write(LENGTH_64)
-                    val lenBytes = (payload.size.toLong()).toByteArray()
+                    val lenBytes = payload.size.toLong().toByteArray()
                     write(lenBytes)
                     write(payload)
                 }

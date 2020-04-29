@@ -19,11 +19,23 @@ data class Request(
     val webSocketKey: String?
         get() = headers["Sec-WebSocket-Key"]
 
-    fun getHeader(key: String): String? = headers[key]
+    constructor(path: String, method: Method, version: String, headers: MutableMap<String, String>) :
+            this(path, method, version, "${method.name} $path $version", headers)
 
-    companion object {
-        private val WHITESPACE_REGEX = Regex("\\s")
-        /** Split a String into a list of Strings separated by whitespace. */
-        private fun String.splitByWhitespace() = split(WHITESPACE_REGEX)
+    data class Builder(private val method: Method) {
+
+        private val headers = mutableMapOf<String, String>()
+
+        private var path: String = "/"
+
+        private var version: String = "HTTP/1.1"
+
+        fun setPath(path: String) = apply { this.path = path }
+
+        fun setVersion(version: String) = apply { this.version = version }
+
+        fun addHeader(key: String, value: String) = apply { headers[key] = value }
+
+        fun build(): Request = Request(path, method, version, headers)
     }
 }

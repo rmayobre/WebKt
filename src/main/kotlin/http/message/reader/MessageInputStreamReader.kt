@@ -3,10 +3,12 @@ package http.message.reader
 import exception.BadRequestException
 import http.Method
 import http.Status
+import http.exception.HttpException
 import http.message.Message
 import http.message.Request
 import http.message.Response
 import java.io.BufferedReader
+import java.io.IOException
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.lang.StringBuilder
@@ -14,6 +16,7 @@ import java.lang.StringBuilder
 class MessageInputStreamReader(
     private val input: InputStream
 ) : MessageReader {
+    @Throws(IOException::class, BadRequestException::class)
     override fun read(): Message {
         val inputStreamReader = InputStreamReader(input)
         val bufferedReader = BufferedReader(inputStreamReader)
@@ -42,6 +45,7 @@ class MessageInputStreamReader(
         return build(startLine, headers)
     }
 
+    @Throws(BadRequestException::class)
     private fun build(
         startLine: String,
         headers: MutableMap<String, String>,

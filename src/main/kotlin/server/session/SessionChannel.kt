@@ -36,7 +36,7 @@ class SessionChannel(
                     }
                 }
             }.build()
-            writer.write(handshake)
+//            writer.write(handshake)
         } ?: throw HandshakeException("Request did not provided a key.")
     }
 

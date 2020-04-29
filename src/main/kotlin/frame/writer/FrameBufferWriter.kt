@@ -1,14 +1,11 @@
 package frame.writer
 
-import Handshake
 import applyMask
-import exception.HandshakeException
 import exception.InvalidFrameException
 import exception.WebsocketException
 import exception.WebsocketIOException
 import frame.Frame
 import frame.OpCode
-import frame.writer.FrameBufferWriter.Companion.write
 import toByteArray
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -28,18 +25,6 @@ class FrameBufferWriter(private val channel: SocketChannel) : FrameWriter {
             OpCode.CONTINUATION -> throw InvalidFrameException(
                 "Cannot write a continuation frame; Continuation " +
                         "frames must be attached to a data frame."
-            )
-        }
-    }
-
-    @Throws(WebsocketException::class)
-    override fun write(handshake: Handshake) {
-        try {
-            channel.write(ByteBuffer.wrap(handshake.toByteArray()))
-        } catch (ex: IOException) {
-            throw HandshakeException(
-                "Handshake could not be complete.",
-                ex
             )
         }
     }

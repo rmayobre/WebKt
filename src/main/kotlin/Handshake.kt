@@ -2,19 +2,12 @@ import exception.HandshakeException
 import exception.WebsocketException
 import http.Status
 import http.Method
+import http.message.Message
+import http.message.Request
+import http.message.Response
 import java.security.MessageDigest
 
-// TODO update to use Messages.
-data class Handshake(
-    private val line: String,
-    private val headers: Map<String, String>
-) {
-
-    private constructor(method: Method, path: String, version: String, headers: Map<String, String>):
-            this("${method.name} $path $version", headers)
-
-    private constructor(version: String, status: Status, headers: Map<String, String>):
-            this("$version ${status.code} ${status.message}", headers)
+data class Handshake(private val message: Message) : Message by message {
 
     fun toByteArray(): ByteArray {
         val builder = StringBuilder("$line\r\n")
@@ -26,53 +19,50 @@ data class Handshake(
     }
 
     /** Builder class for client-side Handshake request. */
-    class Client(host: String, private val path: String, key: String) {
+    class Client(host: String, path: String, key: String) {
 
-        private val headers = mutableMapOf<String, String>()
+        private val builder = Request.Builder(Method.GET)
+            .setPath(path)
+            .setVersion("HTTP/1.1")
+            .addHeader("Host", host)
+            .addHeader("Upgrade", WEBSOCKET_UPGRADE_TYPE)
+            .addHeader("Connection", WEBSOCKET_CONNECTION_TYPE)
+            .addHeader("Sec-WebSocket-Key", key)
+            .addHeader("Sec-WebSocket-Version", WEBSOCKET_VERSION)
 
-        private var method: Method = Method.GET
-
-        private var version: String = "HTTP/1.1"
-
-        init {
-            headers["Host"] = host
-            headers["Upgrade"] = WEBSOCKET_UPGRADE_TYPE
-            headers["Connection"] = WEBSOCKET_CONNECTION_TYPE
-            headers["Sec-WebSocket-Key"] = key
-            headers["Sec-WebSocket-Version"] = WEBSOCKET_VERSION
+        fun setVersion(version: String) = apply {
+            builder.setVersion(version)
         }
 
-        fun setMethod(method: Method) = apply { this.method = method }
+        fun addHeader(key: String, value: String) = apply {
+            builder.addHeader(key, value)
+        }
 
-        fun setVersion(version: String) = apply { this.version = version }
+        fun build() = Handshake(builder.build())
 
-        fun addHeader(key: String, value: String) = apply { headers[key] = value }
-
-        fun build(): Handshake = Handshake(method, path, version, headers)
+        override fun toString(): String = builder.toString()
     }
 
     /** Builder class for server-side Handshake response. */
     class Server(key: String) {
 
-        private val headers = mutableMapOf<String, String>()
+        private val builder = Response.Builder(Status.SWITCH_PROTOCOL)
+            .setVersion("HTTP/1.1")
+            .addHeader("Upgrade", WEBSOCKET_UPGRADE_TYPE)
+            .addHeader("Connection", WEBSOCKET_CONNECTION_TYPE)
+            .addHeader("Sec-WebSocket-Accept", key.toAcceptanceKey())
 
-        private var status: Status = Status.SWITCH_PROTOCOL
-
-        private var version: String = "HTTP/1.1"
-
-        init {
-            headers["Upgrade"] = WEBSOCKET_UPGRADE_TYPE
-            headers["Connection"] = WEBSOCKET_CONNECTION_TYPE
-            headers["Sec-WebSocket-Accept"] = key.toAcceptanceKey()
+        fun setVersion(version: String) = apply {
+            builder.setVersion(version)
         }
 
-        fun setStatus(status: Status) = apply { this.status = status }
+        fun addHeader(key: String, value: String) = apply {
+            builder.addHeader(key, value)
+        }
 
-        fun setVersion(version: String) = apply { this.version = version }
+        fun build() = Handshake(builder.build())
 
-        fun addHeader(key: String, value: String) = apply { headers[key] = value }
-
-        fun build(): Handshake = Handshake(version, status, headers)
+        override fun toString(): String = builder.toString()
     }
 
     companion object {
@@ -86,6 +76,12 @@ data class Handshake(
         private const val WEBSOCKET_UPGRADE_TYPE = "websocket"
 
         private const val WEBSOCKET_CONNECTION_TYPE = "Upgrade"
+
+        fun default(key: String): Handshake =
+            Server(key).build()
+
+        fun default(host: String, path: String, key: String) =
+            Client(host, path, key).build()
 
         /**
          * Generates acceptance key to be sent back to client when performing handshake.
