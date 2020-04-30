@@ -62,8 +62,9 @@ class MissingMaskFragmentException : WebsocketException("Client did not send a m
  * @see ClosureCode.TLS_ERROR
  */
 class HandshakeException : WebsocketException {
-    constructor(message: String): super(message, ClosureCode.TLS_ERROR)
-    constructor(message: String, cause: Throwable): super(message, cause, ClosureCode.TLS_ERROR)
+    constructor(message: String) : super(message, ClosureCode.TLS_ERROR)
+    constructor(cause: Throwable) : super(cause, ClosureCode.TLS_ERROR)
+    constructor(message: String, cause: Throwable) : super(message, cause, ClosureCode.TLS_ERROR)
 }
 
 class NoUTFException(exception: UnsupportedEncodingException):

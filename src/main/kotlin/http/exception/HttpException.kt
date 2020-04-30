@@ -24,4 +24,7 @@ open class HttpException : Exception {
 
 }
 
-// TODO make a bad request exception
+class BadMessageException : HttpException {
+    constructor(message: String) : super(message, Status.BAD_REQUEST)
+    constructor(cause: Throwable) : super(cause, Status.BAD_REQUEST)
+}

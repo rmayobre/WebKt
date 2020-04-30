@@ -16,108 +16,70 @@ import java.io.Closeable
 import java.nio.ByteBuffer
 import java.util.concurrent.BlockingQueue
 
+// TODO Test writer's stability and closing process.
 class WebsocketWriter(
     private val writer: FrameWriter,
-    private val messageWriter: MessageWriter,
-    private val messageReader: MessageReader,
     private val factory: FrameFactory,
     private val queue: BlockingQueue<Frame>,
     private val handler: WebsocketEventHandler
 ): Thread(), Closeable {
 
-    var isClosed: Boolean = false
-        private set
-
-    /*
-        @Throws(HandshakeException::class)
-    override fun write(handshake: Handshake) {
-        try {
-            output.write(handshake.toByteArray())
-        } catch (ex: IOException) {
-            throw HandshakeException(
-                "Handshake could not be complete.",
-                ex
-            )
-        }
-    }
-
-        @Throws(WebsocketException::class)
-    override fun write(handshake: Handshake) {
-        try {
-            channel.write(ByteBuffer.wrap(handshake.toByteArray()))
-        } catch (ex: IOException) {
-            throw HandshakeException(
-                "Handshake could not be complete.",
-                ex
-            )
-        }
-    }
-     */
-
-    @Throws(WebsocketException::class)
-    fun handshake(handshake: Handshake): Response {
-        messageWriter.write(handshake)
-        return messageReader.read() as Response
-    }
-
     fun send(message: String) {
-        if (!isClosed) {
+        if (isAlive) {
             queue.put(factory.text(message))
         }
     }
 
     fun send(data: ByteArray) {
-        if (!isClosed) {
+        if (isAlive) {
             queue.put(factory.binary(data))
         }
     }
 
     fun ping(data: ByteArray? = null) {
-        if (!isClosed) {
+        if (isAlive) {
             queue.put(factory.ping(data))
         }
     }
 
     fun pong(data: ByteArray? = null) {
-        if (!isClosed) {
+        if (isAlive) {
             queue.put(factory.pong(data))
         }
     }
 
     @Synchronized
     fun close(code: ClosureCode) {
-        if (!isClosed) {
+        if (isAlive) {
             queue.put(factory.close(code))
         }
     }
 
     override fun close() {
-        if (!isClosed) {
-            isClosed = true
+        if (isAlive) {
             queue.clear()
             queue.putPoison()
         }
     }
 
     override fun run() {
-        while (!isClosed) {
+        while (true) {
             try {
                 val frame = queue.take()
                 if (frame.code == OpCode.CLOSE) {
                     if (frame.length == -1) {
-                        break
+                        return
                     } else {
-                        isClosed = true
                         writer.write(frame)
                         handler.onClose(frame.getClosureCode())
-                        break
+                        return
                     }
                 } else {
                     writer.write(frame)
                 }
             } catch (ex: WebsocketIOException) {
                 handler.onError(ex)
-                break
+                return
             } catch (ex: WebsocketException) {
                 handler.onError(ex)
             }

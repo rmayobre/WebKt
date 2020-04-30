@@ -10,6 +10,7 @@ import frame.reader.FrameReader
 import java.io.Closeable
 import java.nio.ByteBuffer
 
+// TODO test reader's stability.
 class WebsocketReader(
     private val reader: FrameReader,
     private val handler: WebsocketEventHandler

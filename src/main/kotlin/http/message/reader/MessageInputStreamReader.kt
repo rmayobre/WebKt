@@ -1,9 +1,8 @@
 package http.message.reader
 
-import exception.BadRequestException
 import http.Method
 import http.Status
-import http.exception.HttpException
+import http.exception.BadMessageException
 import http.message.Message
 import http.message.Request
 import http.message.Response
@@ -16,7 +15,7 @@ import java.lang.StringBuilder
 class MessageInputStreamReader(
     private val input: InputStream
 ) : MessageReader {
-    @Throws(IOException::class, BadRequestException::class)
+    @Throws(IOException::class, BadMessageException::class)
     override fun read(): Message {
         val inputStreamReader = InputStreamReader(input)
         val bufferedReader = BufferedReader(inputStreamReader)
@@ -45,7 +44,7 @@ class MessageInputStreamReader(
         return build(startLine, headers)
     }
 
-    @Throws(BadRequestException::class)
+    @Throws(BadMessageException::class)
     private fun build(
         startLine: String,
         headers: MutableMap<String, String>,
@@ -70,7 +69,7 @@ class MessageInputStreamReader(
                 body = body
             )
         } ?: run {
-            throw BadRequestException("Could not build request from provided data.")
+            throw BadMessageException("Could not build request from provided data.")
         }
     }
 

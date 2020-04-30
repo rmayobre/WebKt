@@ -1,12 +1,14 @@
 package http.message.writer
 
 import http.message.Message
+import java.io.IOException
 import java.io.OutputStream
 import java.io.OutputStreamWriter
 
 class MessageOutputStreamWriter(
     private val output: OutputStream
 ) : MessageWriter {
+    @Throws(IOException::class)
     override fun write(message: Message) {
         val writer = OutputStreamWriter(output, Charsets.UTF_8)
         val builder = StringBuilder("${message.line}\r\n")

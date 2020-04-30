@@ -79,31 +79,4 @@ internal fun ByteArray.toBase64String(): String {
         buf.append("==")
     }
     return buf.toString()
-//    val l = size
-//    val sb = StringBuilder((l + 3) * 4 / 3)
-//    val mod = l % 3
-//    val ll = l - mod
-//    var triad: Int
-//    var i = 0
-//    while (i < ll) {
-//        triad = (this[i].toInt() shl 16) or (this[i + 1].toInt() shl 8) or this[i + 2].toInt()
-//        sb.append(BASE64_ALPHABET[triad shr 18 and 0x3f])
-//        sb.append(BASE64_ALPHABET[triad shr 12 and 0x3f])
-//        sb.append(BASE64_ALPHABET[triad shr 6 and 0x3f])
-//        sb.append(BASE64_ALPHABET[triad and 0x3f])
-//        i += 3
-//    }
-//    if (mod == 1) {
-//        sb.append(BASE64_ALPHABET[this[i].toInt() shr 2 and 0x3f])
-//        sb.append(BASE64_ALPHABET[this[i].toInt() shl 4 and 0x3f])
-//        sb.append("==")
-//    }
-//    if (mod == 2) {
-//        triad = this[i].toInt() shl 8 or this[i + 1].toInt()
-//        sb.append(BASE64_ALPHABET[triad shr 10 and 0x3ff])
-//        sb.append(BASE64_ALPHABET[triad shr 4 and 0x3f])
-//        sb.append(BASE64_ALPHABET[triad shl 2 and 0x3f])
-//        sb.append("=")
-//    }
-//    return sb.toString()
 }
