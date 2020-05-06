@@ -1,7 +1,8 @@
-package http.message.factory
+package http.message.reader.factory
 
 import http.message.reader.MessageInputStreamReader
 import http.message.reader.MessageReader
+import http.message.reader.factory.MessageReaderFactory
 import java.net.Socket
 import java.nio.channels.SocketChannel
 

@@ -33,6 +33,7 @@ class SessionChannelFactory(
         writer = writerFactory.create(channel)
     )
 
+    @Deprecated("replace with MessageBufferReader")
     @Throws(BadRequestException::class)
     private fun readRequest(channel: SocketChannel): Request {
         val headers: MutableMap<String, String> = mutableMapOf()

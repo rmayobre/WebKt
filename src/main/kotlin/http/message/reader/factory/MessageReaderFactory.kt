@@ -1,4 +1,4 @@
-package http.message.factory
+package http.message.reader.factory
 
 import http.message.reader.MessageReader
 import java.net.Socket

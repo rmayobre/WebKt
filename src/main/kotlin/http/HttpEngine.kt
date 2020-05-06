@@ -7,10 +7,10 @@ import http.exception.HttpExceptionHandler
 import http.message.Message
 import http.message.Request
 import http.message.Response
-import http.message.factory.MessageBufferReaderFactory
-import http.message.factory.MessageBufferWriterFactory
-import http.message.factory.MessageReaderFactory
-import http.message.factory.MessageWriterFactory
+import http.message.reader.factory.MessageBufferReaderFactory
+import http.message.writer.factory.MessageBufferWriterFactory
+import http.message.reader.factory.MessageReaderFactory
+import http.message.writer.factory.MessageWriterFactory
 import http.message.reader.MessageReader
 import http.message.writer.MessageWriter
 import java.io.IOException
@@ -70,9 +70,11 @@ open class HttpEngine protected constructor(
 
     data class Builder(private val address: InetAddress, private val executor: ExecutorService) {
 
-        private var readerFactory: MessageReaderFactory = MessageBufferReaderFactory()
+        private var readerFactory: MessageReaderFactory =
+            MessageBufferReaderFactory()
 
-        private var writerFactory: MessageWriterFactory = MessageBufferWriterFactory()
+        private var writerFactory: MessageWriterFactory =
+            MessageBufferWriterFactory()
 
         private val exceptionHandlers: MutableMap<KClass<*>, HttpExceptionHandler<*>> = mutableMapOf()
 

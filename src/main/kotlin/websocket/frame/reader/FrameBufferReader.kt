@@ -67,7 +67,7 @@ class FrameBufferReader(
     private fun buildFrame(): Frame {
         try {
             val bytes = ByteBuffer.allocate(2)
-            while (bytes.hasRemaining()) {
+            while (bytes.hasRemaining()) { // TODO fix this
                 if (!buffer.hasRemaining()) {
                     buffer.clear()
                     channel.read(buffer)

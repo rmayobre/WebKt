@@ -1,7 +1,8 @@
-package http.message.factory
+package http.message.writer.factory
 
 import http.message.writer.MessageOutputStreamWriter
 import http.message.writer.MessageWriter
+import http.message.writer.factory.MessageWriterFactory
 import java.net.Socket
 import java.nio.channels.SocketChannel
 
