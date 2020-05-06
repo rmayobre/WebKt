@@ -10,19 +10,23 @@ data class Response(
     override val body: String? = null
 ): Message {
 
-    constructor(version: String, status: Status, headers: Map<String, String>):
-            this(status, version, "$version ${status.code} ${status.message}", headers)
-
     data class Builder(private val status: Status) {
 
         private val headers = mutableMapOf<String, String>()
 
         private var version: String = "HTTP/1.1"
 
+        private var body: String? = null
+
+        private val statusLine: String
+            get() = "$version ${status.code} ${status.message}"
+
         fun setVersion(version: String) = apply { this.version = version }
 
         fun addHeader(key: String, value: String) = apply { headers[key] = value }
 
-        fun build(): Response = Response(version, status, headers)
+        fun setBody(body: String) = apply { this.body = body }
+
+        fun build(): Response = Response(status, version, statusLine, headers, body)
     }
 }
