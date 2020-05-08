@@ -40,7 +40,7 @@ class FrameBufferWriter(private val channel: SocketChannel) : FrameWriter {
             currentFrame = currentFrame.next!!
 
             if (currentFrame.isMasked) {
-                val key = Random().nextInt()
+                val key: Int = Random().nextInt()
                 channel.writeMaskedPayload(frame, key)
             } else {
                 channel.writePayload(currentFrame)
@@ -50,13 +50,17 @@ class FrameBufferWriter(private val channel: SocketChannel) : FrameWriter {
 
     @Throws(WebsocketException::class)
     private fun writeControl(frame: Frame) {
-        if (frame.next != null) {
-            throw InvalidFrameException("A control websocket.frame cannot be fragmented.")
-        } else if (frame.isMasked) {
-            val key = Random().nextInt()
-            channel.writeMaskedPayload(frame, key)
-        } else {
-            channel.writePayload(frame)
+        when {
+            frame.next != null -> {
+                throw InvalidFrameException("A control websocket.frame cannot be fragmented.")
+            }
+            frame.isMasked -> {
+                val key = Random().nextInt()
+                channel.writeMaskedPayload(frame, key)
+            }
+            else -> {
+                channel.writePayload(frame)
+            }
         }
     }
 
@@ -114,24 +118,28 @@ class FrameBufferWriter(private val channel: SocketChannel) : FrameWriter {
         @Throws(WebsocketIOException::class)
         private fun SocketChannel.writePayload(frame: Frame) {
             val payload: ByteArray = frame.payload.toByteArray()
+            val output = ByteArrayOutputStream()
             when {
-                payload.size <= LENGTH_16_MIN -> {
+                payload.size <= LENGTH_16_MIN -> with(output) {
                     write(payload.size)
                     write(payload)
                 }
-                payload.size <= LENGTH_64_MIN -> {
+
+                payload.size <= LENGTH_64_MIN -> with(output) {
                     write(LENGTH_16)
                     val lenBytes = (payload.size.toShort()).toByteArray()
                     write(lenBytes)
                     write(payload)
                 }
-                else -> {
+
+                else -> with(output) {
                     write(LENGTH_64)
                     val lenBytes = (payload.size.toLong()).toByteArray()
                     write(lenBytes)
                     write(payload)
                 }
             }
+            write(output.toByteArray())
         }
 
         /**
@@ -141,26 +149,23 @@ class FrameBufferWriter(private val channel: SocketChannel) : FrameWriter {
         @Throws(WebsocketIOException::class)
         private fun SocketChannel.writeMaskedPayload(frame: Frame, key: Int) {
             val payload: ByteArray = frame.payload.toByteArray()
+            val output = ByteArrayOutputStream()
             when {
-                payload.size <= LENGTH_16_MIN -> {
-                    val output = ByteArrayOutputStream().apply {
-                        write(payload.size)
-                        write(key)
-                        write(payload.applyMask(key))
-                    }
-                    write(output.toByteArray())
-//                    write(payload.size)
-//                    write(key)
-//                    write(payload.websocket.applyMask(key))
+                payload.size <= LENGTH_16_MIN -> with(output) {
+                    write(payload.size)
+                    write(key)
+                    write(payload.applyMask(key))
                 }
-                payload.size <= LENGTH_64_MIN -> {
+
+                payload.size <= LENGTH_64_MIN -> with(output) {
                     write(LENGTH_16)
                     val lenBytes = (payload.size.toShort()).toByteArray()
                     write(lenBytes)
                     write(key)
                     write(payload.applyMask(key))
                 }
-                else -> {
+
+                else -> with(output) {
                     write(LENGTH_64)
                     val lenBytes = (payload.size.toLong()).toByteArray()
                     write(lenBytes)
@@ -168,6 +173,7 @@ class FrameBufferWriter(private val channel: SocketChannel) : FrameWriter {
                     write(payload.applyMask(key))
                 }
             }
+            write(output.toByteArray())
         }
 
         @Throws(WebsocketIOException::class)

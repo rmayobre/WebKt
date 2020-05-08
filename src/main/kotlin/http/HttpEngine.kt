@@ -27,6 +27,7 @@ open class HttpEngine protected constructor(
     private val readerFactory: MessageReaderFactory,
     private val writerFactory: MessageWriterFactory,
     private val exceptionHandlers: Map<KClass<*>, HttpExceptionHandler<*>>,
+    private val networkList: NetworkList,
     private val paths: Map<String, Path>,
     private val socketTimeout: Int,
     private val readTimeout: Int,
@@ -36,14 +37,16 @@ open class HttpEngine protected constructor(
 ) : ServerSocketChannelEngine(executor, InetSocketAddress(address, DEFAULT_HTTP_PORT)) {
 
     override fun onAccept(channel: SocketChannel): Boolean {
-        // TODO support a whitelist and a blacklist
-        channel.apply {
-            configureBlocking(blocking)
-            socket().apply {
-                soTimeout = socketTimeout
+        if (networkList.permits(channel.socket().inetAddress)) {
+            channel.apply {
+                configureBlocking(blocking)
+                socket().apply {
+                    soTimeout = socketTimeout
+                }
             }
+            return true
         }
-        return true
+        return false
     }
 
     @Throws(
@@ -76,7 +79,10 @@ open class HttpEngine protected constructor(
         private var writerFactory: MessageWriterFactory =
             MessageBufferWriterFactory()
 
-        private val exceptionHandlers: MutableMap<KClass<*>, HttpExceptionHandler<*>> = mutableMapOf()
+        private val exceptionHandlers: MutableMap<KClass<*>, HttpExceptionHandler<*>> =
+            mutableMapOf()
+
+        private var networkList: NetworkList = EmptyNetworkList()
 
         private val paths: MutableMap<String, Path> = mutableMapOf()
 
@@ -96,6 +102,10 @@ open class HttpEngine protected constructor(
 
         fun setReaderFactory(factory: MessageReaderFactory) = apply {
             readerFactory = factory
+        }
+
+        fun setNetworkList(list: NetworkList) = apply {
+            networkList = list
         }
 
         fun addExceptionHandler(handler: HttpExceptionHandler<*>) = apply {
@@ -118,6 +128,7 @@ open class HttpEngine protected constructor(
             readerFactory,
             writerFactory,
             exceptionHandlers,
+            networkList,
             paths,
             socketTimeout,
             readTimeout,
