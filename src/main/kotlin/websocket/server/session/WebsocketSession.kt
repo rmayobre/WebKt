@@ -1,14 +1,13 @@
 package websocket.server.session
 
 import websocket.ClosureCode
-import websocket.HandshakeException
 import websocket.WebsocketException
 import websocket.frame.Frame
 import http.message.Request
 import java.io.IOException
 import java.nio.channels.SocketChannel
 
-interface Session {
+interface WebsocketSession {
     /** Connection channel to websocket.client. */
     val channel: SocketChannel
 
@@ -21,10 +20,6 @@ interface Session {
     /** Read the next Frame from websocket.client. */
     @Throws(WebsocketException::class)
     fun read(): Frame
-
-    /** Shake hands with websocket.client connection. */
-    @Throws(HandshakeException::class)
-    fun handshake(headers: Map<String, String>? = null)
 
     /** Send a text message to websocket.client. */
     @Throws(WebsocketException::class)
