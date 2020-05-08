@@ -14,6 +14,7 @@ import http.message.writer.factory.MessageWriterFactory
 import http.message.reader.MessageReader
 import http.message.writer.MessageWriter
 import http.path.Path
+import http.path.RunnablePath
 import java.io.IOException
 import java.net.InetAddress
 import java.net.InetSocketAddress
@@ -33,9 +34,9 @@ open class HttpEngine protected constructor(
     private val socketTimeout: Int,
     private val readTimeout: Int,
     private val blocking: Boolean,
-    executor: ExecutorService,
+    service: HttpExecutorService,
     address: InetAddress
-) : ServerSocketChannelEngine(executor, InetSocketAddress(address, DEFAULT_HTTP_PORT)) {
+) : ServerSocketChannelEngine(service, InetSocketAddress(address, DEFAULT_HTTP_PORT)) {
 
     override fun onAccept(channel: SocketChannel): Boolean {
         if (networkList.permits(channel.socket().inetAddress)) {
@@ -61,7 +62,7 @@ open class HttpEngine protected constructor(
         try {
             val message: Message = reader.read(readTimeout, TimeUnit.MILLISECONDS)
             if (message is Request) {
-                paths[message.path]?.submit(message)?.also { response ->
+                paths[message.path]?.onRequest(key, message)?.also { response ->
                     writer.write(response)
                 } ?: throw BadRequestException("Path does not exist.")
             } else {
@@ -85,7 +86,9 @@ open class HttpEngine protected constructor(
 
         private var networkList: NetworkList = EmptyNetworkList()
 
-        private val paths: MutableMap<String, Path> = mutableMapOf()
+        private var runnablePaths: MutableSet<RunnablePath> = mutableSetOf()
+
+        private var paths: MutableMap<String, Path> = mutableMapOf()
 
         private var socketTimeout: Int = DEFAULT_SOCKET_TIMEOUT
 
@@ -113,6 +116,20 @@ open class HttpEngine protected constructor(
             exceptionHandlers[handler.type] = handler
         }
 
+        fun setPaths(paths: Set<Path>) = apply {
+            paths.forEach { path ->
+                if (path is RunnablePath) {
+                    runnablePaths.add(path)
+                } else {
+                    this.paths[path.id] = path
+                }
+            }
+        }
+
+        fun addPath(path: RunnablePath) = apply {
+            runnablePaths.add(path)
+        }
+
         fun addPath(path: Path) = apply {
             paths[path.id] = path
         }
@@ -126,16 +143,20 @@ open class HttpEngine protected constructor(
         }
 
         fun build() = HttpEngine(
-            readerFactory,
-            writerFactory,
-            exceptionHandlers,
-            networkList,
-            paths,
-            socketTimeout,
-            readTimeout,
-            blocking,
-            executor,
-            address)
+            readerFactory = readerFactory,
+            writerFactory = writerFactory,
+            exceptionHandlers = exceptionHandlers,
+            networkList = networkList,
+            paths = paths.apply {
+                runnablePaths.forEach { path ->
+                    put(path.id, path)
+                }
+            },
+            socketTimeout = socketTimeout,
+            readTimeout = readTimeout,
+            blocking = blocking,
+            service = HttpExecutorService(runnablePaths, executor),
+            address = address)
     }
 
     companion object {

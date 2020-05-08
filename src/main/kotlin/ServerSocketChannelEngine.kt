@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
 abstract class ServerSocketChannelEngine(
-    private val executor: ExecutorService,
+    private val service: ExecutorService,
     private val address: InetSocketAddress
 ) : Thread(ENGINE_THREAD) {
 
@@ -41,7 +41,7 @@ abstract class ServerSocketChannelEngine(
                             when {
                                 key.isAcceptable -> {
                                     val channel: SocketChannel = serverSocketChannel.accept()
-                                    executor.submit {
+                                    service.execute {
                                         if (onAccept(channel)) {
                                             channel.register(selector, CHANNEL_OPS)
                                         } else {
@@ -50,10 +50,7 @@ abstract class ServerSocketChannelEngine(
                                     }
                                 }
 
-                                key.isReadable -> executor.submit { onRead(key) }
-
-                                // TODO Handle write event
-//                            key.isWritable -> {}
+                                key.isReadable -> service.execute { onRead(key) }
                             }
                         } catch (ex: IOException) {
                             key.cancel()
@@ -75,10 +72,10 @@ abstract class ServerSocketChannelEngine(
     ) {
         isRunning = false
         try {
-            executor.shutdown()
-            executor.awaitTermination(timeout, timeUnit)
+            service.shutdown()
+            service.awaitTermination(timeout, timeUnit)
         } catch (ex: InterruptedException) {
-            executor.shutdownNow()
+            service.shutdownNow()
         }
         selector.close()
         serverSocketChannel.close()
@@ -86,13 +83,14 @@ abstract class ServerSocketChannelEngine(
 
     /**
      * Should this channel be accepted? It is encourage at this time to configure the channel before accepting.
+     * This will run on it's own thread.
      * @return Return true if the engine registers the channel to the selector; false will close the channel
      */
     @Throws(IOException::class)
     abstract fun onAccept(channel: SocketChannel): Boolean
 
     /**
-     * SelectionKey has a channel with available data to read.
+     * SelectionKey has a channel with available data to read. This will run on it's own thread.
      */
     @Throws(IOException::class, TimeoutException::class)
     abstract fun onRead(key: SelectionKey)
