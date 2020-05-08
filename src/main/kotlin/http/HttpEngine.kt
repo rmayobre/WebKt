@@ -75,7 +75,7 @@ open class HttpEngine protected constructor(
 
     data class Builder(
         private val address: InetAddress,
-        private val executor: ExecutorService
+        private val service: ExecutorService
     ) {
 
         private var readerFactory: MessageReaderFactory = MessageBufferReaderFactory()
@@ -155,7 +155,7 @@ open class HttpEngine protected constructor(
             socketTimeout = socketTimeout,
             readTimeout = readTimeout,
             blocking = blocking,
-            service = HttpExecutorService(runnablePaths, executor),
+            service = HttpExecutorService(runnablePaths, service),
             address = address)
     }
 
