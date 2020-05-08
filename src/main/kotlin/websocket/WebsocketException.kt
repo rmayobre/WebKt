@@ -79,7 +79,7 @@ class InternalErrorException : WebsocketException {
 }
 
 // TODO move into its own exception.
-/** This exception is thrown without a Session because this exception can only occur before a Session has been created. */
+/** This exception is thrown without a http.Session because this exception can only occur before a http.Session has been created. */
 @Deprecated("remove")
 class BadRequestException : WebsocketException {
     constructor() : super("Request could not be determined from endpoint.", ClosureCode.PROTOCOL_ERROR)

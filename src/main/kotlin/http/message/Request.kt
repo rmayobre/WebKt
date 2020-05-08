@@ -11,14 +11,6 @@ data class Request(
     override val body: String? = null
 ): Message {
 
-    val isWebSocketUpgrade: Boolean =
-        headers["Upgrade"] == "Websocket"
-            && headers["Connection"] == "Upgrade"
-            && headers["Sec-WebSocket-Version"] == "13"
-
-    val webSocketKey: String?
-        get() = headers["Sec-WebSocket-Key"]
-
     constructor(path: String, method: Method, version: String, headers: MutableMap<String, String>) :
             this(path, method, version, "${method.name} $path $version", headers)
 

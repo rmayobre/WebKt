@@ -1,4 +1,4 @@
-package http
+package http.path
 
 import http.Method.*
 import http.exception.BadRequestException
@@ -6,10 +6,10 @@ import http.exception.HttpException
 import http.message.Request
 import http.message.Response
 
-open class Path(val key: String) {
+open class RestPath(override val id: String) : Path {
 
     @Throws(HttpException::class)
-    fun submit(request: Request): Response = when (request.method) {
+    override fun submit(request: Request): Response = when (request.method) {
         GET -> get(request)
         PUT -> put(request)
         POST -> post(request)

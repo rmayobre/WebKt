@@ -5,9 +5,9 @@ import websocket.frame.Frame
 
 /**
  * A factory design pattern for creating a websocket.frame that can be sent through any
- * Websocket connection (Session or Websocket).
+ * Websocket connection (http.Session or Websocket).
  * @see DefaultFrameFactory default implementation.
- * @see server.session.Session A WebsocketServer's session for a websocket.client Websocket connection.
+ * @see server.session.http.Session A WebsocketServer's session for a websocket.client Websocket connection.
  * @see client.Websocket A websocket.client-side implementation of a Websocket connection.
  */
 interface FrameFactory {

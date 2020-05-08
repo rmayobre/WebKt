@@ -98,10 +98,10 @@ class SessionChanneler(
 
     /**
      * The handshake process as a runnable. The websocket.server.SessionEventHandler
-     * will decided if the websocket.server will shake hands with the Session.
+     * will decided if the websocket.server will shake hands with the http.Session.
      * If the websocket.server.SessionEventHandler returns true, then the websocket.server will
      * shake hands and the Websocket connection is established; otherwise
-     * the websocket.server.SessionEventHandler is responsible for closing the Session.
+     * the websocket.server.SessionEventHandler is responsible for closing the http.Session.
      */
     private inner class Handshake(
         private val channel: SocketChannel,
@@ -193,7 +193,7 @@ class SessionChanneler(
 
 //    private inner class WriteTransmission(
 //        private val handler: SessionEventHandler,
-//        private val session: Session
+//        private val session: http.Session
 //    ) : Runnable {
 //        override fun run() {
 //            try {

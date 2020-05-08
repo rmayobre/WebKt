@@ -13,6 +13,7 @@ import http.message.reader.factory.MessageReaderFactory
 import http.message.writer.factory.MessageWriterFactory
 import http.message.reader.MessageReader
 import http.message.writer.MessageWriter
+import http.path.Path
 import java.io.IOException
 import java.net.InetAddress
 import java.net.InetSocketAddress
@@ -71,16 +72,16 @@ open class HttpEngine protected constructor(
         }
     }
 
-    data class Builder(private val address: InetAddress, private val executor: ExecutorService) {
+    data class Builder(
+        private val address: InetAddress,
+        private val executor: ExecutorService
+    ) {
 
-        private var readerFactory: MessageReaderFactory =
-            MessageBufferReaderFactory()
+        private var readerFactory: MessageReaderFactory = MessageBufferReaderFactory()
 
-        private var writerFactory: MessageWriterFactory =
-            MessageBufferWriterFactory()
+        private var writerFactory: MessageWriterFactory = MessageBufferWriterFactory()
 
-        private val exceptionHandlers: MutableMap<KClass<*>, HttpExceptionHandler<*>> =
-            mutableMapOf()
+        private val exceptionHandlers: MutableMap<KClass<*>, HttpExceptionHandler<*>> = mutableMapOf()
 
         private var networkList: NetworkList = EmptyNetworkList()
 
@@ -113,7 +114,7 @@ open class HttpEngine protected constructor(
         }
 
         fun addPath(path: Path) = apply {
-            paths[path.key] = path
+            paths[path.id] = path
         }
 
         fun setSocketTimeout(timeout: Int) = apply {
@@ -143,7 +144,7 @@ open class HttpEngine protected constructor(
         private const val DEFAULT_READ_TIMEOUT = 30000
 
         @Suppress("UNCHECKED_CAST")
-        fun <T : HttpException> Map<KClass<*>, HttpExceptionHandler<*>>.getResponse(exception: HttpException, type: KClass<T>): Response {
+        private fun <T : HttpException> Map<KClass<*>, HttpExceptionHandler<*>>.getResponse(exception: HttpException, type: KClass<T>): Response {
             val handler: HttpExceptionHandler<T>? =  get(type)?.let { it as HttpExceptionHandler<T> }
             return handler?.handle(exception as T) ?: exception.response
         }
