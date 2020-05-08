@@ -3,17 +3,33 @@ Websocket implementation for Kotlin following [RFC 6455](https://tools.ietf.org/
 
 # Features
 * Supports Java 8 (currently does not support Android encoding, but will in an upcoming update).
-* Frame encoding/decoding
-* Buffer and Stream reading support
-* Handshake Requests
-* Custom Hanshake headers
-* Ping/Pong
-* Frame Fragmentation
+* Non-blocking channels for server=side implementations.
+* HTTP Support
+    * Server-side request reading
+    * Server-side responses
+    * Paths (An object that handles a paths requests and methods).
+    * Blacklist network addresses.
+    * Whitelist network addresses.
+    * HttpExceptions
+    
+* Websocket Support
+    * Server-side support
+    * Client-side support
+    * Frame encoding/decoding
+    * Buffer and Stream reading support
+    * Handshake Requests
+    * Custom Hanshake headers
+    * Ping/Pong
+    * Frame Fragmentation
+ 
+* Android Support (Not fully tested)
+    * Base 64 encoding support
 
-# Future Features
-* Android support - Handshake encoding does not work at the moment.
+# Future Features (Check project boards for updates)
+* SSL SocketChannels
+* HTTPS support
 * WSS support
 * Wiki page - Detailed instructions on how to use WebKt
 
 # Dependencies
-Java 8 - Everything is written with native libraries
+Java 8 - Everything is written with native libraries (with Kotlin)
