@@ -1,5 +1,5 @@
 # WebKt
-Websocket implementation for Kotlin following [RFC 6455](https://tools.ietf.org/html/rfc6455). This library allows Kotlin/JVM projects to utilize the Websocket protocol on the client and server-side. Server-side implementations utilize Java's NIO libraries, while the client-side Websockets are IO (running two threads for reads and writes).
+An extremely lightweight networking library that only uses native java libraries (also native Kotlin libraries). This library supports HTTP, as well as Websockets, and follows [RFC 6455](https://tools.ietf.org/html/rfc6455) guidelines. This library is dedicated to serving as a lightweight server or client networking library for smaller systems. A background server process (such as Apache Tomcat or Jetty) will not be needed as this library will do all the HTTP processing for you (if you wish). WebKt is designed with choice in mind. A lot of the classes and interfaces are designed with the idea for the developer to take what they like, and make the rest. All parts of this library are modular, and all code is licensed to remain open-sourced.
 
 # Features
 * Supports Java 8 (currently does not support Android encoding, but will in an upcoming update).
@@ -32,4 +32,5 @@ Websocket implementation for Kotlin following [RFC 6455](https://tools.ietf.org/
 * Wiki page - Detailed instructions on how to use WebKt
 
 # Dependencies
-Java 8 - Everything is written with native libraries (with Kotlin)
+* Java 8 
+* Kotlin 1.3
