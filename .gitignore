@@ -14,9 +14,12 @@ gradle-app.setting
 # gradle/wrapper/gradle-wrapper.properties
 
 build
-.gradle
 .idea
 
 *.iml
 gradle.properties
 local.properties
+gradlew
+gradlew.bat
+/gradle/wrapper/gradle-wrapper.jar
+/gradle/wrapper/gradle-wrapper.properties
