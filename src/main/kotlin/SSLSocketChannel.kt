@@ -1,30 +1,78 @@
-import java.net.SocketAddress
+import java.io.IOException
+import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import java.nio.channels.*
+import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLEngine
+import javax.net.ssl.SSLSession
 
 class SSLSocketChannel(
-    private val channel: SocketChannel
-) : ByteChannel by channel,
-    ScatteringByteChannel by channel,
-    GatheringByteChannel by channel,
-    NetworkChannel by channel {
+    private val channel: SocketChannel,
+    private val sslEngine: SSLEngine
+) : ByteChannel, NetworkChannel by channel {
 
-    constructor(address: SocketAddress): this(
+    private val session: SSLSession = sslEngine.session
 
-    )
+    /**
+     * This side's un-encrypted data.
+     */
+    private lateinit var data: ByteBuffer
 
-    override fun bind(address: SocketAddress): SSLSocketChannel {
-        channel.bind(address)
-        return this
+    /**
+     * Encrypted data from this side.
+     */
+    private lateinit var encryptedData: ByteBuffer
+
+    /**
+     * This will contain the endpoint's decrypted data.
+     */
+    private lateinit var peerData: ByteBuffer
+
+    /**
+     * Contains the encrypted data sent from endpoint.
+     */
+    private lateinit var encryptedPeerData: ByteBuffer
+
+    /** Client-side constructor. */
+    constructor(context: SSLContext): this(SocketChannel.open(), context.createSSLEngine()) {
+        sslEngine.useClientMode = true
+    }
+
+    /** Server-side constructor. */
+    constructor(channel: SocketChannel, context: SSLContext): this(channel, context.createSSLEngine()) {
+        TODO("perform handshake.")
     }
 
     override fun isOpen(): Boolean = channel.isOpen
 
-    override fun read(buffer: ByteBuffer): Int = channel.read(buffer)
+    override fun read(buffer: ByteBuffer): Int {
+        channel.read(buffer)
+        TODO("Use SSLEngine to encrypt data.")
+    }
 
-    override fun write(buffer: ByteBuffer): Int = channel.write(buffer)
+    override fun write(buffer: ByteBuffer): Int {
+        channel.write(buffer)
+        TODO("Use SSLEngine to encrypt data.")
+    }
 
     override fun close() = channel.close()
+
+    @Throws(IOException::class)
+    fun connect(address: InetSocketAddress, block: Boolean = false): Boolean {
+        if (!channel.isConnected) {
+            channel.configureBlocking(block)
+            if (channel.connect(address)) {
+                sslEngine.beginHandshake()
+                TODO("FINISH CONNECTION PROCESS.")
+            }
+        }
+
+        return false
+    }
+
+    private fun performHandshake() {
+        TODO("Process handshake.")
+    }
 }
 
 //class SSLSocketChannel(

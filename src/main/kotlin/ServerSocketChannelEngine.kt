@@ -8,6 +8,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
+// TODO create a seperate thread object and blocking/nonblocking runnables.
 abstract class ServerSocketChannelEngine(
     private val service: ExecutorService,
     private val address: InetSocketAddress
