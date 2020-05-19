@@ -8,33 +8,37 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
-// TODO create a seperate thread object and blocking/nonblocking runnables.
-// TODO implement ServerEngine interface.
 abstract class ServerSocketChannelEngine(
+    override val address: InetSocketAddress,
     private val service: ExecutorService,
-    private val address: InetSocketAddress
-) : Thread(ENGINE_THREAD) {
+    private val name: String? = null
+): ServerEngine, Runnable {
 
     private lateinit var serverSocketChannel: ServerSocketChannel
 
     private lateinit var selector: Selector
 
-    var isRunning: Boolean = false
-        private set
+    private lateinit var thread: Thread
+
+    private var running: Boolean = false
+
+    val isRunning: Boolean
+        get() = running && thread.isAlive
 
     override fun start() {
-        isRunning = true
+        running = true
         selector = Selector.open()
         serverSocketChannel = ServerSocketChannel.open().apply {
             bind(address)
             configureBlocking(false)
             register(selector, SelectionKey.OP_ACCEPT)
         }
-        super.start()
+        thread = Thread(this, name ?: DEFAULT_THREAD_NAME)
+        thread.start()
     }
 
     override fun run() {
-        while (isRunning) {
+        while (running) {
             if (selector.select() > 0) {
                 val selectedKeys: Set<SelectionKey> = selector.selectedKeys()
                 selectedKeys.forEach { key ->
@@ -54,13 +58,8 @@ abstract class ServerSocketChannelEngine(
 
                                 key.isReadable -> service.execute { onRead(key) }
                             }
-                        } catch (ex: IOException) {
-                            key.cancel()
                         } catch (ex: Exception) {
-                            // Any exceptions not handled result in
-                            // a channel shutdown and key removal.
-                            key.channel().close()
-                            key.cancel()
+                            onException(key, ex)
                         }
                     }
                 }
@@ -68,11 +67,8 @@ abstract class ServerSocketChannelEngine(
         }
     }
 
-    fun stop(
-        timeout: Long = TERMINATION_TIMEOUT_SECONDS,
-        timeUnit: TimeUnit = TimeUnit.SECONDS
-    ) {
-        isRunning = false
+    override fun stop(timeout: Long, timeUnit: TimeUnit) {
+        running = false
         try {
             service.shutdown()
             service.awaitTermination(timeout, timeUnit)
@@ -89,22 +85,19 @@ abstract class ServerSocketChannelEngine(
      * @return Return true if the engine registers the channel to the selector; false will close the channel
      */
     @Throws(IOException::class)
-    abstract fun onAccept(channel: SocketChannel): Boolean
+    protected abstract fun onAccept(channel: SocketChannel): Boolean
 
     /**
      * SelectionKey has a channel with available data to read. This will run on it's own thread.
      */
     @Throws(IOException::class, TimeoutException::class)
-    abstract fun onRead(key: SelectionKey)
+    protected abstract fun onRead(key: SelectionKey)
 
-    // TODO utilize
-    abstract fun onException(key: SelectionKey, ex: Exception)
+    protected abstract fun onException(key: SelectionKey, ex: Exception)
 
     companion object {
-        /** The executor will wait 60 seconds for it's tasks to finish before termination. */
-        private const val ENGINE_THREAD = "server-channel-engine"
+        private const val DEFAULT_THREAD_NAME = "server-socket-channel-thread"
         /** Ops for the accepted channels. */
         private const val CHANNEL_OPS = SelectionKey.OP_READ or SelectionKey.OP_WRITE
-        private const val TERMINATION_TIMEOUT_SECONDS = 60L
     }
 }

@@ -1,14 +1,18 @@
 import java.io.IOException
+import java.net.InetSocketAddress
+import java.nio.channels.SelectionKey
 import java.util.concurrent.TimeUnit
 
 interface ServerEngine {
+
+    val address: InetSocketAddress
+
     /**
      * Start your engine.
-     * @param blocking configure the Server's socket to blocking or non-blocking.
      * @throws IOException thrown if engine could not open sockets.
      */
     @Throws(IOException::class)
-    fun start(blocking: Boolean)
+    fun start()
 
     /**
      * Stop the engine.

@@ -48,21 +48,6 @@ class SSLSocketChannel(
         engine.useClientMode = true
     }
 
-    /** Default server-side constructor. */
-    constructor(channel: SocketChannel): this(SSLContext.getDefault(), channel)
-
-    /** Server-side constructor. */
-    constructor(context: SSLContext, channel: SocketChannel): this(channel, context.createSSLEngine()) {
-        with(engine) {
-            useClientMode = false
-            needClientAuth = true
-            beginHandshake()
-        }
-        if (!performHandshake()) {
-            close()
-        }
-    }
-
     init {
         // Initialize buffers for decrypted data.
         data = ByteBuffer.allocate(session.applicationBufferSize)
@@ -175,7 +160,7 @@ class SSLSocketChannel(
 
     @Synchronized
     @Throws(IOException::class)
-    private fun performHandshake(): Boolean {
+    fun performHandshake(): Boolean {
         var isComplete = false
         while (!isComplete && isOpen) {
             when (engine.handshakeStatus) {
