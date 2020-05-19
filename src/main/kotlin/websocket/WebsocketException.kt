@@ -77,12 +77,3 @@ class InternalErrorException : WebsocketException {
     constructor(throwable: Throwable) : super(throwable, ClosureCode.INTERNAL_ERROR)
     constructor(message: String, throwable: Throwable) : super(message, throwable, ClosureCode.INTERNAL_ERROR)
 }
-
-// TODO move into its own exception.
-/** This exception is thrown without a http.Session because this exception can only occur before a http.Session has been created. */
-@Deprecated("remove")
-class BadRequestException : WebsocketException {
-    constructor() : super("Request could not be determined from endpoint.", ClosureCode.PROTOCOL_ERROR)
-    constructor(message: String) : super(message, ClosureCode.PROTOCOL_ERROR)
-    constructor(message: String, cause: Throwable) : super(message, cause, ClosureCode.PROTOCOL_ERROR)
-}

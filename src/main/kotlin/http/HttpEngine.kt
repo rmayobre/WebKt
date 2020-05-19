@@ -36,7 +36,7 @@ open class HttpEngine protected constructor(
     private val blocking: Boolean,
     service: HttpExecutorService,
     address: InetAddress
-) : ServerSocketChannelEngine(service, InetSocketAddress(address, DEFAULT_HTTP_PORT)) {
+) : ServerSocketChannelEngine(InetSocketAddress(address, DEFAULT_HTTP_PORT), service) {
 
     override fun onAccept(channel: SocketChannel): Boolean {
         if (networkList.permits(channel.socket().inetAddress)) {
@@ -73,11 +73,14 @@ open class HttpEngine protected constructor(
         }
     }
 
+    override fun onException(key: SelectionKey, ex: Exception) {
+        TODO("Not yet implemented")
+    }
+
     data class Builder(
         private val address: InetAddress,
         private val service: ExecutorService
     ) {
-
         private var readerFactory: MessageReaderFactory = MessageBufferReaderFactory()
 
         private var writerFactory: MessageWriterFactory = MessageBufferWriterFactory()

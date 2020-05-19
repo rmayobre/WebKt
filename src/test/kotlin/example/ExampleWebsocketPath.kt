@@ -11,7 +11,7 @@ import websocket.server.session.factory.WebsocketSessionFactory
 import java.lang.Exception
 import java.util.concurrent.ExecutorService
 
-class WebsocketAPI private constructor(
+class ExampleWebsocketPath private constructor(
     path: String,
     service: ExecutorService,
     factory: WebsocketSessionFactory
