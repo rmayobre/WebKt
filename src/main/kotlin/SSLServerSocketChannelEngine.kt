@@ -32,6 +32,6 @@ class SSLServerSocketChannelEngine : ServerEngine {
     }
 
     companion object {
-        private const val THREAD_NAME = "ssl-server-engine-webkt"
+        private const val THREAD_NAME = "ssl-server-channel-engine"
     }
 }

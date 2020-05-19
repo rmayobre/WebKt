@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
 // TODO create a seperate thread object and blocking/nonblocking runnables.
+// TODO implement ServerEngine interface.
 abstract class ServerSocketChannelEngine(
     private val service: ExecutorService,
     private val address: InetSocketAddress
@@ -96,9 +97,12 @@ abstract class ServerSocketChannelEngine(
     @Throws(IOException::class, TimeoutException::class)
     abstract fun onRead(key: SelectionKey)
 
+    // TODO utilize
+    abstract fun onException(key: SelectionKey, ex: Exception)
+
     companion object {
         /** The executor will wait 60 seconds for it's tasks to finish before termination. */
-        private const val ENGINE_THREAD = "Channel-Engine-Thread"
+        private const val ENGINE_THREAD = "server-channel-engine"
         /** Ops for the accepted channels. */
         private const val CHANNEL_OPS = SelectionKey.OP_READ or SelectionKey.OP_WRITE
         private const val TERMINATION_TIMEOUT_SECONDS = 60L

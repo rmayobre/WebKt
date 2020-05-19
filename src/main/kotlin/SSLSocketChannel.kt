@@ -1,22 +1,26 @@
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
-import java.nio.channels.*
-import javax.net.ssl.SSLContext
-import javax.net.ssl.SSLEngine
-import javax.net.ssl.SSLSession
+import java.nio.channels.ByteChannel
+import java.nio.channels.NetworkChannel
+import java.nio.channels.SocketChannel
+import javax.net.ssl.*
+import javax.net.ssl.SSLEngineResult.HandshakeStatus.*
+import javax.net.ssl.SSLEngineResult.Status.*
 
 class SSLSocketChannel(
     private val channel: SocketChannel,
-    private val sslEngine: SSLEngine
+    private val engine: SSLEngine
 ) : ByteChannel, NetworkChannel by channel {
 
-    private val session: SSLSession = sslEngine.session
+    private val session: SSLSession = engine.session
+
+    private var isShakingHands = true
 
     /**
      * This side's un-encrypted data.
      */
-    private lateinit var data: ByteBuffer
+    private lateinit var decryptedData: ByteBuffer
 
     /**
      * Encrypted data from this side.
@@ -24,45 +28,47 @@ class SSLSocketChannel(
     private lateinit var encryptedData: ByteBuffer
 
     /**
-     * This will contain the endpoint's decrypted data.
+     * The decrypted data received from other endpoint.
      */
-    private lateinit var peerData: ByteBuffer
+    private lateinit var decryptedPeerData: ByteBuffer
 
     /**
-     * Contains the encrypted data sent from endpoint.
+     * The encrypted data received from other endpoint.
      */
     private lateinit var encryptedPeerData: ByteBuffer
 
+    /** Default client-side constructor. */
+    constructor(host: String, port: Int): this(SSLContext.getDefault(), host, port)
+
     /** Client-side constructor. */
-    constructor(context: SSLContext): this(SocketChannel.open(), context.createSSLEngine()) {
-        sslEngine.useClientMode = true
+    constructor(context: SSLContext, host: String, port: Int): this(SocketChannel.open(), context.createSSLEngine(host, port)) {
+        engine.useClientMode = true
     }
 
     /** Server-side constructor. */
     constructor(channel: SocketChannel, context: SSLContext): this(channel, context.createSSLEngine()) {
+        engine.useClientMode = false
+        engine.needClientAuth = true
+
         TODO("perform handshake.")
+    }
+
+    init {
+
     }
 
     override fun isOpen(): Boolean = channel.isOpen
 
-    override fun read(buffer: ByteBuffer): Int {
-        channel.read(buffer)
-        TODO("Use SSLEngine to encrypt data.")
-    }
-
-    override fun write(buffer: ByteBuffer): Int {
-        channel.write(buffer)
-        TODO("Use SSLEngine to encrypt data.")
-    }
-
+    @Throws(IOException::class)
     override fun close() = channel.close()
 
+    @Synchronized
     @Throws(IOException::class)
     fun connect(address: InetSocketAddress, block: Boolean = false): Boolean {
         if (!channel.isConnected) {
             channel.configureBlocking(block)
             if (channel.connect(address)) {
-                sslEngine.beginHandshake()
+                engine.beginHandshake()
                 TODO("FINISH CONNECTION PROCESS.")
             }
         }
@@ -70,8 +76,101 @@ class SSLSocketChannel(
         return false
     }
 
+    @Throws(IOException::class)
+    override fun read(buffer: ByteBuffer): Int {
+        channel.read(buffer)
+        TODO("Use SSLEngine to encrypt data.")
+    }
+
+    @Throws(IOException::class)
+    override fun write(buffer: ByteBuffer): Int {
+        channel.write(buffer)
+        TODO("Use SSLEngine to encrypt data.")
+    }
+
     private fun performHandshake() {
-        TODO("Process handshake.")
+        while (isShakingHands && isOpen) {
+            when (engine.handshakeStatus!!) {
+                NOT_HANDSHAKING -> {
+                    if (encryptedData.position() > 0) {
+                        isShakingHands = isShakingHands or wrap()
+                    }
+                    if (decryptedData.position() > 0) {
+                        isShakingHands = isShakingHands or unwrap()
+                    }
+                }
+                NEED_WRAP -> isShakingHands = wrap()
+                NEED_UNWRAP -> isShakingHands = unwrap()
+                NEED_TASK -> {
+                    var task: Runnable?
+                    while (engine.delegatedTask.also { task = it } != null) {
+                        task?.run() // TODO run asynchronously
+                    }
+                    isShakingHands = true
+                }
+                FINISHED -> isShakingHands = false
+            }
+        }
+    }
+
+    @Throws(SSLException::class)
+    private fun wrap(): Boolean {
+        val result: SSLEngineResult = try {
+            encryptedData.flip()
+            engine.wrap(encryptedData, encryptedPeerData)
+        } catch (ex: SSLException) {
+            engine.closeOutbound()
+            return false
+        } finally {
+            encryptedData.compact()
+        }
+
+        when (result.status!!) {
+            OK -> {
+                if (encryptedPeerData.position() > 0) {
+                    encryptedPeerData.flip()
+                    channel.write(encryptedPeerData)
+                    encryptedPeerData.compact()
+                }
+            }
+            BUFFER_UNDERFLOW -> throw SSLException("Buffer underflow occurred while wrapping.")
+            BUFFER_OVERFLOW -> throw SSLException("Buffer overflow occurred while wrapping.")
+            CLOSED -> return false // Operations closed.
+        }
+
+        return true
+    }
+
+    @Throws(SSLException::class)
+    private fun unwrap(): Boolean {
+        val result: SSLEngineResult = try {
+            decryptedData.flip()
+            engine.wrap(decryptedData, decryptedPeerData)
+        } catch (ex: SSLException) {
+            engine.closeOutbound()
+            return false
+        } finally {
+            decryptedData.compact()
+        }
+
+        when (result.status!!) {
+            OK -> {
+                if (decryptedPeerData.position() > 0) {
+                    decryptedPeerData.flip()
+                    channel.write(decryptedPeerData)
+                    decryptedPeerData.compact()
+                }
+            }
+            BUFFER_UNDERFLOW -> throw SSLException("Buffer underflow occurred while wrapping.")
+            BUFFER_OVERFLOW -> throw SSLException("Buffer overflow occurred while wrapping.")
+            CLOSED -> return false // Operations closed.
+        }
+
+        if (result.handshakeStatus == FINISHED) {
+            return false
+        }
+
+        return true
     }
 }
 
