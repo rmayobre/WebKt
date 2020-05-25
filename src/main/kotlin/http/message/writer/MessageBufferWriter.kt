@@ -6,6 +6,8 @@ import java.lang.StringBuilder
 import java.nio.ByteBuffer
 import java.nio.channels.SocketChannel
 
+
+@Deprecated("Replaced with Message Channels")
 class MessageBufferWriter(
     private val channel: SocketChannel
 ) : MessageWriter {

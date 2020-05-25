@@ -6,6 +6,7 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
+@Deprecated("Replaced with Message Channels")
 interface MessageReader {
 
     @Throws(

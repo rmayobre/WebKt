@@ -6,6 +6,7 @@ import http.message.reader.factory.MessageReaderFactory
 import java.net.Socket
 import java.nio.channels.SocketChannel
 
+@Deprecated("Replaced with Message Channels")
 class MessageInputStreamReaderFactory : MessageReaderFactory {
     override fun create(socket: Socket): MessageReader {
         return MessageInputStreamReader(socket.getInputStream())

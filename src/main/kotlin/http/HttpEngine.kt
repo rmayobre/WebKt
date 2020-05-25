@@ -7,6 +7,9 @@ import http.exception.HttpExceptionHandler
 import http.message.Message
 import http.message.Request
 import http.message.Response
+import http.message.channel.MessageChannel
+import http.message.channel.factory.MessageBufferChannelFactory
+import http.message.channel.factory.MessageChannelFactory
 import http.message.reader.factory.MessageBufferReaderFactory
 import http.message.writer.factory.MessageBufferWriterFactory
 import http.message.reader.factory.MessageReaderFactory
@@ -27,14 +30,12 @@ import kotlin.reflect.KClass
  * HTTP protocol layer of the ServerSocketChannelEngine inheritance.
  */
 open class HttpEngine protected constructor(
-    private val readerFactory: MessageReaderFactory,
-    private val writerFactory: MessageWriterFactory,
+    private val factory: MessageChannelFactory,
     private val exceptionHandlers: Map<KClass<*>, HttpExceptionHandler<*>>,
     private val networkList: NetworkList,
     private val paths: Map<String, Path>,
     private val socketTimeout: Int,
     private val readTimeout: Int,
-    private val blocking: Boolean,
     service: HttpExecutorService,
     host: String,
     port: Int = DEFAULT_HTTP_PORT
@@ -44,44 +45,44 @@ open class HttpEngine protected constructor(
         this(host, DEFAULT_HTTP_PORT, service)
 
     constructor(host: String, port: Int, service: HttpExecutorService) : this(
-        readerFactory = MessageBufferReaderFactory(),
-        writerFactory = MessageBufferWriterFactory(),
-        exceptionHandlers = mutableMapOf(),
-        networkList = EmptyNetworkList(),
-        paths = mutableMapOf(),
-        socketTimeout = DEFAULT_SOCKET_TIMEOUT,
-        readTimeout = DEFAULT_READ_TIMEOUT,
-        blocking = false,
-        service = service,
-        host = host,
-        port = port
+            factory = MessageBufferChannelFactory(),
+            exceptionHandlers = mutableMapOf(),
+            networkList = EmptyNetworkList(),
+            paths = mutableMapOf(),
+            socketTimeout = DEFAULT_SOCKET_TIMEOUT,
+            readTimeout = DEFAULT_READ_TIMEOUT,
+            service = service,
+            host = host,
+            port = port
     )
 
-    override fun onAccept(channel: SocketChannel): Boolean {
-        if (networkList.permits(channel.socket().inetAddress)) {
-            channel.apply {
-                configureBlocking(blocking)
-//                socket().apply {
-//                    soTimeout = socketTimeout
-//                }
-            }
-            return true
-        }
-        return false
-    }
+    override fun onAccept(channel: SocketChannel): Boolean =
+            networkList.permits(channel.socket().inetAddress)
+
+//    override fun onAccept(channel: SocketChannel): Boolean {
+//        if (networkList.permits(channel.socket().inetAddress)) {
+//            channel.apply {
+//                configureBlocking(blocking)
+////                socket().apply {
+////                    soTimeout = socketTimeout
+////                }
+//            }
+//            return true
+//        }
+//        return false
+//    }
 
     @Throws(
         IOException::class,
         TimeoutException::class,
         BadRequestException::class)
     override fun onRead(channel: SocketChannel) {
-        val writer: MessageWriter = writerFactory.create(channel)
-        val reader: MessageReader = readerFactory.create(channel)
+        val messageChannel: MessageChannel = factory.create(channel)
         try {
-            val message: Message = reader.read(readTimeout, TimeUnit.MILLISECONDS)
+            val message: Message = messageChannel.read(readTimeout, TimeUnit.MILLISECONDS)
             if (message is Request) {
                 paths[message.path]?.onRequest(channel, message)?.also { response ->
-                    writer.write(response)
+                    messageChannel.write(response)
                     // TODO check if connection needs to be closed
                 } ?: throw BadRequestException("Path does not exist.")
             } else {
@@ -92,7 +93,7 @@ open class HttpEngine protected constructor(
             println("HttpException (Reason): ${ex.reason}")
             println("HttpException (Response): ${ex.response}")
             println("HttpException (Body): ${ex.body}")
-            writer.write(exceptionHandlers.getResponse(ex, ex::class))
+            messageChannel.write(exceptionHandlers.getResponse(ex, ex::class))
             channel.close()
         }
     }
@@ -106,9 +107,7 @@ open class HttpEngine protected constructor(
         private val host: String,
         private val service: ExecutorService
     ) {
-        private var readerFactory: MessageReaderFactory = MessageBufferReaderFactory()
-
-        private var writerFactory: MessageWriterFactory = MessageBufferWriterFactory()
+        private var factory: MessageChannelFactory = MessageBufferChannelFactory()
 
         private val exceptionHandlers: MutableMap<KClass<*>, HttpExceptionHandler<*>> = mutableMapOf()
 
@@ -122,24 +121,14 @@ open class HttpEngine protected constructor(
 
         private var readTimeout: Int = DEFAULT_READ_TIMEOUT
 
-        private var blocking: Boolean = false
-
         private var port: Int = DEFAULT_HTTP_PORT
-
-        fun configureBlocking(blocking: Boolean) = apply {
-            this.blocking = blocking
-        }
 
         fun setPort(port: Int) = apply {
             this.port = port
         }
 
-        fun setWriterFactory(factory: MessageWriterFactory) = apply {
-            writerFactory = factory
-        }
-
-        fun setReaderFactory(factory: MessageReaderFactory) = apply {
-            readerFactory = factory
+        fun setChannelFactory(factory: MessageChannelFactory) = apply {
+            this.factory = factory
         }
 
         fun setNetworkList(list: NetworkList) = apply {
@@ -177,21 +166,20 @@ open class HttpEngine protected constructor(
         }
 
         fun build() = HttpEngine(
-            readerFactory = readerFactory,
-            writerFactory = writerFactory,
-            exceptionHandlers = exceptionHandlers,
-            networkList = networkList,
-            paths = paths.apply {
-                runnablePaths.forEach { path ->
-                    put(path.id, path)
-                }
-            },
-            socketTimeout = socketTimeout,
-            readTimeout = readTimeout,
-            blocking = blocking,
-            service = HttpExecutorService(runnablePaths, service),
-            host = host,
-            port = port)
+                factory = factory,
+                exceptionHandlers = exceptionHandlers,
+                networkList = networkList,
+                paths = paths.apply {
+                    runnablePaths.forEach { path ->
+                        put(path.id, path)
+                    }
+                },
+                socketTimeout = socketTimeout,
+                readTimeout = readTimeout,
+                service = HttpExecutorService(runnablePaths, service),
+                host = host,
+                port = port
+        )
     }
 
     companion object {

@@ -1,7 +1,5 @@
-import com.sun.org.apache.bcel.internal.generic.Select
 import java.io.IOException
 import java.net.InetSocketAddress
-import java.net.Socket
 import java.nio.channels.SelectionKey
 import java.nio.channels.Selector
 import java.nio.channels.ServerSocketChannel
@@ -24,7 +22,7 @@ abstract class ServerSocketChannelEngine(
     private var running: Boolean = false
 
     val isRunning: Boolean
-        get() = running && thread.isAlive
+        get() = running && if (::thread.isInitialized) thread.isAlive else false
 
     override fun start() {
         running = true
@@ -119,7 +117,6 @@ abstract class ServerSocketChannelEngine(
 
     companion object {
         private const val DEFAULT_THREAD_NAME = "server-socket-channel-thread"
-
         private const val DEFAULT_TIMEOUT_SECONDS = 60L
     }
 }

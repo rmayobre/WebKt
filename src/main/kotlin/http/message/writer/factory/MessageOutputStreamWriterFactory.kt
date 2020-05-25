@@ -6,6 +6,7 @@ import http.message.writer.factory.MessageWriterFactory
 import java.net.Socket
 import java.nio.channels.SocketChannel
 
+@Deprecated("Replaced with Message Channels")
 class MessageOutputStreamWriterFactory : MessageWriterFactory {
     override fun create(socket: Socket): MessageWriter {
         return MessageOutputStreamWriter(socket.getOutputStream())
