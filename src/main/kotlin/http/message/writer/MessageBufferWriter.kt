@@ -14,7 +14,9 @@ class MessageBufferWriter(
         val output: ByteArrayOutputStream = ByteArrayOutputStream().apply {
             write(message.line.toByteArray())
             write(message.headersToString().toByteArray())
+            write("\r\n".toByteArray())
             message.body?.let { body -> write(body.toByteArray()) }
+            write("\r\n".toByteArray())
         }
         channel.write(ByteBuffer.wrap(output.toByteArray()))
     }

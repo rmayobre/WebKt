@@ -16,15 +16,16 @@ import http.message.writer.MessageWriter
 import http.path.Path
 import http.path.RunnablePath
 import java.io.IOException
-import java.net.InetAddress
 import java.net.InetSocketAddress
-import java.nio.channels.SelectionKey
 import java.nio.channels.SocketChannel
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import kotlin.reflect.KClass
 
+/**
+ * HTTP protocol layer of the ServerSocketChannelEngine inheritance.
+ */
 open class HttpEngine protected constructor(
     private val readerFactory: MessageReaderFactory,
     private val writerFactory: MessageWriterFactory,
@@ -35,16 +36,34 @@ open class HttpEngine protected constructor(
     private val readTimeout: Int,
     private val blocking: Boolean,
     service: HttpExecutorService,
-    address: InetAddress
-) : ServerSocketChannelEngine(InetSocketAddress(address, DEFAULT_HTTP_PORT), service) {
+    host: String,
+    port: Int = DEFAULT_HTTP_PORT
+) : ServerSocketChannelEngine(InetSocketAddress(host, port), service) {
+
+    constructor(host: String, service: HttpExecutorService):
+        this(host, DEFAULT_HTTP_PORT, service)
+
+    constructor(host: String, port: Int, service: HttpExecutorService) : this(
+        readerFactory = MessageBufferReaderFactory(),
+        writerFactory = MessageBufferWriterFactory(),
+        exceptionHandlers = mutableMapOf(),
+        networkList = EmptyNetworkList(),
+        paths = mutableMapOf(),
+        socketTimeout = DEFAULT_SOCKET_TIMEOUT,
+        readTimeout = DEFAULT_READ_TIMEOUT,
+        blocking = false,
+        service = service,
+        host = host,
+        port = port
+    )
 
     override fun onAccept(channel: SocketChannel): Boolean {
         if (networkList.permits(channel.socket().inetAddress)) {
             channel.apply {
                 configureBlocking(blocking)
-                socket().apply {
-                    soTimeout = socketTimeout
-                }
+//                socket().apply {
+//                    soTimeout = socketTimeout
+//                }
             }
             return true
         }
@@ -55,30 +74,36 @@ open class HttpEngine protected constructor(
         IOException::class,
         TimeoutException::class,
         BadRequestException::class)
-    override fun onRead(key: SelectionKey) {
-        val channel: SocketChannel = key.channel() as SocketChannel
+    override fun onRead(channel: SocketChannel) {
         val writer: MessageWriter = writerFactory.create(channel)
         val reader: MessageReader = readerFactory.create(channel)
         try {
             val message: Message = reader.read(readTimeout, TimeUnit.MILLISECONDS)
             if (message is Request) {
-                paths[message.path]?.onRequest(key, message)?.also { response ->
+                paths[message.path]?.onRequest(channel, message)?.also { response ->
                     writer.write(response)
+                    // TODO check if connection needs to be closed
                 } ?: throw BadRequestException("Path does not exist.")
             } else {
                 throw BadRequestException("Expecting a Request to be sent.")
             }
         } catch (ex: HttpException) {
+            println("HttpException (Message): ${ex.message}")
+            println("HttpException (Reason): ${ex.reason}")
+            println("HttpException (Response): ${ex.response}")
+            println("HttpException (Body): ${ex.body}")
             writer.write(exceptionHandlers.getResponse(ex, ex::class))
+            channel.close()
         }
     }
 
-    override fun onException(key: SelectionKey, ex: Exception) {
-        TODO("Not yet implemented")
+    override fun onException(ex: Exception) {
+        println("Exception: ${ex.message}")
+        println("Exception: ${ex.stackTrace}")
     }
 
     data class Builder(
-        private val address: InetAddress,
+        private val host: String,
         private val service: ExecutorService
     ) {
         private var readerFactory: MessageReaderFactory = MessageBufferReaderFactory()
@@ -99,8 +124,14 @@ open class HttpEngine protected constructor(
 
         private var blocking: Boolean = false
 
+        private var port: Int = DEFAULT_HTTP_PORT
+
         fun configureBlocking(blocking: Boolean) = apply {
             this.blocking = blocking
+        }
+
+        fun setPort(port: Int) = apply {
+            this.port = port
         }
 
         fun setWriterFactory(factory: MessageWriterFactory) = apply {
@@ -159,7 +190,8 @@ open class HttpEngine protected constructor(
             readTimeout = readTimeout,
             blocking = blocking,
             service = HttpExecutorService(runnablePaths, service),
-            address = address)
+            host = host,
+            port = port)
     }
 
     companion object {

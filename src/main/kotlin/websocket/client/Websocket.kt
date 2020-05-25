@@ -45,7 +45,7 @@ open class Websocket(
 //    constructor(address: String, protocols: Array<String>) : this() TODO create a constructor that takes in a string and array of strings.
 
     constructor(address: InetSocketAddress): this(address,
-        Handshake.client("${address.hostName}:${address.port}")
+        Handshake.Client("${address.hostName}:${address.port}").build()
     )
 
     constructor(address: InetSocketAddress, handshake: Handshake) : this(

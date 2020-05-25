@@ -1,18 +1,19 @@
+import com.sun.org.apache.bcel.internal.generic.Select
 import java.io.IOException
 import java.net.InetSocketAddress
+import java.net.Socket
 import java.nio.channels.SelectionKey
 import java.nio.channels.Selector
 import java.nio.channels.ServerSocketChannel
 import java.nio.channels.SocketChannel
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
 
 abstract class ServerSocketChannelEngine(
-    override val address: InetSocketAddress,
+    address: InetSocketAddress,
     private val service: ExecutorService,
-    private val name: String? = null
-): ServerEngine, Runnable {
+    private val name: String = DEFAULT_THREAD_NAME
+): ServerEngine<SocketChannel>(address), Runnable {
 
     private lateinit var serverSocketChannel: ServerSocketChannel
 
@@ -33,41 +34,68 @@ abstract class ServerSocketChannelEngine(
             configureBlocking(false)
             register(selector, SelectionKey.OP_ACCEPT)
         }
-        thread = Thread(this, name ?: DEFAULT_THREAD_NAME)
+        thread = Thread(this, name)
         thread.start()
     }
 
     override fun run() {
         while (running) {
-            if (selector.select() > 0) {
-                val selectedKeys: Set<SelectionKey> = selector.selectedKeys()
-                selectedKeys.forEach { key ->
-                    if (key.isValid) {
-                        try {
+            if (selector.selectNow() > 0) {
+                val selectedKeys: MutableSet<SelectionKey> = selector.selectedKeys()
+                val iterator: MutableIterator<SelectionKey> = selectedKeys.iterator()
+                while(iterator.hasNext()) {
+                    val key: SelectionKey = iterator.next()
+                    iterator.remove()
+                    try {
+                        if (key.isValid) {
                             when {
                                 key.isAcceptable -> {
-                                    val channel: SocketChannel = serverSocketChannel.accept()
-                                    service.execute {
-                                        if (onAccept(channel)) {
-                                            channel.register(selector, CHANNEL_OPS)
-                                        } else {
-                                            channel.close()
+                                    serverSocketChannel.accept()?.let { channel ->
+                                        service.execute {
+                                            try {
+                                                if (onAccept(channel)) {
+                                                    channel.register(selector, SelectionKey.OP_READ)
+                                                } else {
+                                                    channel.close()
+                                                }
+                                            } catch (ex: Exception) {
+                                                onException(ex)
+                                            }
                                         }
                                     }
                                 }
 
-                                key.isReadable -> service.execute { onRead(key) }
+                                key.isReadable -> {
+                                    service.execute {
+                                        try {
+                                            onRead(key.channel() as SocketChannel)
+                                        } catch (ex: Exception) {
+                                            onException(ex)
+                                        }
+                                    }
+                                    key.cancel()
+                                }
                             }
-                        } catch (ex: Exception) {
-                            onException(key, ex)
                         }
+                    } catch (ex: Exception) {
+                        onException(ex)
                     }
                 }
             }
         }
     }
 
-    override fun stop(timeout: Long, timeUnit: TimeUnit) {
+    override fun stop() = stop(
+        timeout = DEFAULT_TIMEOUT_SECONDS,
+        timeUnit = TimeUnit.SECONDS
+    )
+
+    /**
+     * Stop the ServerSocketChannel and all running tasks.
+     * @param timeout How long the engine will wait for pending processes to finish before a forced shutdown.
+     * @param timeUnit The unit of time the engine will use to measure the timeout length.
+     */
+    fun stop(timeout: Long, timeUnit: TimeUnit) {
         running = false
         try {
             service.shutdown()
@@ -79,25 +107,19 @@ abstract class ServerSocketChannelEngine(
         serverSocketChannel.close()
     }
 
+
     /**
-     * Should this channel be accepted? It is encourage at this time to configure the channel before accepting.
-     * This will run on it's own thread.
-     * @return Return true if the engine registers the channel to the selector; false will close the channel
+     * Register channel back into selector.
+     * @throws IOException if channel cannot be registered to selector.
      */
     @Throws(IOException::class)
-    protected abstract fun onAccept(channel: SocketChannel): Boolean
-
-    /**
-     * SelectionKey has a channel with available data to read. This will run on it's own thread.
-     */
-    @Throws(IOException::class, TimeoutException::class)
-    protected abstract fun onRead(key: SelectionKey)
-
-    protected abstract fun onException(key: SelectionKey, ex: Exception)
+    protected fun register(channel: SocketChannel) {
+        channel.register(selector, SelectionKey.OP_READ)
+    }
 
     companion object {
         private const val DEFAULT_THREAD_NAME = "server-socket-channel-thread"
-        /** Ops for the accepted channels. */
-        private const val CHANNEL_OPS = SelectionKey.OP_READ or SelectionKey.OP_WRITE
+
+        private const val DEFAULT_TIMEOUT_SECONDS = 60L
     }
 }

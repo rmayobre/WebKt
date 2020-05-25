@@ -1,7 +1,6 @@
 package http.exception
 
 import http.Status
-import http.message.Request
 import http.message.Response
 import java.lang.Exception
 import java.util.*

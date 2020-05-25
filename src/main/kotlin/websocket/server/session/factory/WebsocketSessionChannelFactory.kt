@@ -10,6 +10,7 @@ import websocket.frame.writer.factory.FrameWriterFactory
 import websocket.server.session.WebsocketSession
 import websocket.server.session.WebsocketSessionChannel
 import java.nio.channels.SocketChannel
+import java.util.*
 
 class WebsocketSessionChannelFactory(
     private val frameFactory: FrameFactory = DefaultFrameFactory(true),
@@ -18,6 +19,7 @@ class WebsocketSessionChannelFactory(
 ) : WebsocketSessionFactory {
     override fun create(channel: SocketChannel, request: Request): WebsocketSession {
         return WebsocketSessionChannel(
+            id = UUID.randomUUID().toString(),
             request = request,
             channel = channel,
             factory = frameFactory,
