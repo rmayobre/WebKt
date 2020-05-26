@@ -185,7 +185,7 @@ class SSLSocketChannel(
                 NEED_TASK -> {
                     var task: Runnable?
                     while (engine.delegatedTask.also { task = it } != null) {
-                        task?.run() // TODO run asynchronously
+                        task?.run()
                     }
                 }
                 NOT_HANDSHAKING -> return false

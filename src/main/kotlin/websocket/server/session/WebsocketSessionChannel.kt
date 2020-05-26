@@ -9,6 +9,7 @@ import websocket.frame.writer.FrameWriter
 import java.nio.channels.SocketChannel
 
 class WebsocketSessionChannel(
+    override val id: String,
     override val request: Request,
     override val channel: SocketChannel,
     private val factory: FrameFactory,

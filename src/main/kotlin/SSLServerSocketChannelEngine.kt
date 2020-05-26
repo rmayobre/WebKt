@@ -1,5 +1,4 @@
 import java.net.InetSocketAddress
-import java.nio.channels.SelectionKey
 import java.nio.channels.SocketChannel
 import java.util.concurrent.ExecutorService
 import javax.net.ssl.SSLContext
@@ -12,8 +11,7 @@ abstract class SSLServerSocketChannelEngine(
     name: String? = null
 ) : ServerSocketChannelEngine(address, service, name ?: DEFAULT_THREAD_NAME) {
 
-    override fun onRead(key: SelectionKey) {
-        val channel: SocketChannel = key.channel() as SocketChannel
+    override fun onRead(channel: SocketChannel) {
         val engine: SSLEngine = context.createSSLEngine().apply {
             useClientMode = false
             needClientAuth = true

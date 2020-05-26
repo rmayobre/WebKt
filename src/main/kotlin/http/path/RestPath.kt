@@ -6,11 +6,12 @@ import http.exception.HttpException
 import http.message.Request
 import http.message.Response
 import java.nio.channels.SelectionKey
+import java.nio.channels.SocketChannel
 
 open class RestPath(override val id: String) : Path {
 
     @Throws(HttpException::class)
-    override fun onRequest(key: SelectionKey, request: Request): Response = when (request.method) {
+    override fun onRequest(channel: SocketChannel, request: Request): Response = when (request.method) {
         GET -> onGet(request)
         PUT -> onPut(request)
         POST -> onPost(request)
@@ -22,42 +23,42 @@ open class RestPath(override val id: String) : Path {
     }
 
     @Throws(HttpException::class)
-    protected fun onGet(request: Request): Response {
+    protected open fun onGet(request: Request): Response {
         throw BadRequestException("This path does not support GET method.")
     }
 
     @Throws(HttpException::class)
-    protected fun onPut(request: Request): Response {
+    protected open fun onPut(request: Request): Response {
         throw BadRequestException("This path does not support PUT method.")
     }
 
     @Throws(HttpException::class)
-    protected fun onPost(request: Request): Response {
+    protected open fun onPost(request: Request): Response {
         throw BadRequestException("This path does not support POST method.")
     }
 
     @Throws(HttpException::class)
-    protected fun onDelete(request: Request): Response {
+    protected open fun onDelete(request: Request): Response {
         throw BadRequestException("This path does not support DELETE method.")
     }
 
     @Throws(HttpException::class)
-    protected fun onHead(request: Request): Response {
+    protected open fun onHead(request: Request): Response {
         throw BadRequestException("This path does not support HEAD method.")
     }
 
     @Throws(HttpException::class)
-    protected fun onOptions(request: Request): Response {
+    protected open fun onOptions(request: Request): Response {
         throw BadRequestException("This path does not support OPTIONS method.")
     }
 
     @Throws(HttpException::class)
-    protected fun onTrace(request: Request): Response {
+    protected open fun onTrace(request: Request): Response {
         throw BadRequestException("This path does not support TRACE method.")
     }
 
     @Throws(HttpException::class)
-    protected fun onConnect(request: Request): Response {
+    protected open fun onConnect(request: Request): Response {
         throw BadRequestException("This path does not support CONNECT method.")
     }
 }

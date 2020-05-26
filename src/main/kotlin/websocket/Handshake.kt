@@ -27,8 +27,8 @@ data class Handshake(private val message: Message) : Message by message {
             .addHeader("Host", host)
             .addHeader("Upgrade", WEBSOCKET_UPGRADE_TYPE)
             .addHeader("Connection", WEBSOCKET_CONNECTION_TYPE)
-            .addHeader("Sec-WebSocket-Key", generateKey())
-            .addHeader("Sec-WebSocket-Version", WEBSOCKET_VERSION)
+            .addHeader(SEC_WEBSOCKET_KEY, generateKey())
+            .addHeader(SEC_WEBSOCKET_VERSION, SEC_WEBSOCKET_VERSION_VALUE)
 
         fun setKey(key: String) = apply {
             builder.addHeader("Sec-WebSocket-Key", key)
@@ -57,7 +57,7 @@ data class Handshake(private val message: Message) : Message by message {
         private val builder = Response.Builder(Status.SWITCH_PROTOCOL)
             .addHeader("Upgrade", WEBSOCKET_UPGRADE_TYPE)
             .addHeader("Connection", WEBSOCKET_CONNECTION_TYPE)
-            .addHeader("Sec-WebSocket-Accept", key.toAcceptanceKey())
+            .addHeader(SEC_WEBSOCKET_ACCEPT, key.toAcceptanceKey())
 
         fun setVersion(version: String) = apply {
             builder.setVersion(version)
@@ -75,19 +75,17 @@ data class Handshake(private val message: Message) : Message by message {
     companion object {
         private const val MAGIC_KEY = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
-        private const val WEBSOCKET_VERSION = "13"
-
         private const val WEBSOCKET_UPGRADE_TYPE = "websocket"
 
         private const val WEBSOCKET_CONNECTION_TYPE = "Upgrade"
 
-        fun server(key: String): Handshake = Server(
-            key
-        ).build()
+        private const val SEC_WEBSOCKET_KEY = "Sec-WebSocket-Key"
 
-        fun client(host: String): Handshake = Client(
-            host
-        ).build()
+        private const val SEC_WEBSOCKET_ACCEPT = "Sec-WebSocket-Accept"
+
+        private const val SEC_WEBSOCKET_VERSION = "Sec-WebSocket-Version"
+
+        private const val SEC_WEBSOCKET_VERSION_VALUE = "13"
 
         /**
          * Generates acceptance key to be sent back to websocket.client when performing handshake.

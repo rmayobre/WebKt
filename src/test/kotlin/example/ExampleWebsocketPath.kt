@@ -21,42 +21,47 @@ class ExampleWebsocketPath private constructor(
             this(path, service, WebsocketSessionChannelFactory())
 
     override fun onHandshake(request: Request): Handshake {
-        TODO("Not yet implemented")
+        println("$id -> onHandshake: $request")
+        return Handshake.Server(request.websocketKey()!!).build()
     }
 
     override fun onConnection(session: WebsocketSession) {
-        TODO("Not yet implemented")
+        println("New WebsocketSession was created.")
     }
 
     override fun onMessage(session: WebsocketSession, message: String) {
-        TODO("Not yet implemented")
+        println("${session.id} (Message): $message")
     }
 
     override fun onMessage(session: WebsocketSession, data: ByteArray) {
-        TODO("Not yet implemented")
+        println("${session.id} (Bytes): $data")
     }
 
     override fun onPing(session: WebsocketSession, data: ByteArray?) {
-        TODO("Not yet implemented")
+        println("${session.id} (Ping): $data")
     }
 
     override fun onPong(session: WebsocketSession, data: ByteArray?) {
-        TODO("Not yet implemented")
+        println("${session.id} (Pong): $data")
     }
 
     override fun onClose(session: WebsocketSession, closureCode: ClosureCode) {
-        TODO("Not yet implemented")
+        println("${session.id} (Connection closed): $closureCode")
     }
 
     override fun onError(session: WebsocketSession, ex: WebsocketException) {
-        TODO("Not yet implemented")
+        println("${session.id} (Websocket Error): ${ex.code} - ${ex.message}")
+        println("${session.id} (Stack): ${ex.stackTrace}")
+//        session.close(ex.code)
     }
 
     override fun onError(session: WebsocketSession, ex: Exception) {
-        TODO("Not yet implemented")
+        println("${session.id} (Error): ${ex.message}")
+        println("${session.id} (Stack): ${ex.stackTrace}")
     }
 
     override fun onError(ex: Exception) {
-        TODO("Not yet implemented")
+        println("Exception: ${ex.message}")
+        println("Exception: ${ex.stackTrace}")
     }
 }

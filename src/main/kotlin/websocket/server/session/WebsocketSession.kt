@@ -8,6 +8,9 @@ import java.io.IOException
 import java.nio.channels.SocketChannel
 
 interface WebsocketSession {
+    /** Unique id for session. */
+    val id: String
+
     /** Connection channel to websocket.client. */
     val channel: SocketChannel
 

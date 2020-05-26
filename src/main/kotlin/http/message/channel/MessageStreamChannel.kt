@@ -1,25 +1,26 @@
-package http.message.reader
+package http.message.channel
 
 import http.message.BadMessageException
 import http.message.Message
 import http.message.buildMessage
 import http.message.splitHeader
-import java.io.BufferedReader
-import java.io.IOException
-import java.io.InputStream
-import java.io.InputStreamReader
+import java.io.*
 import java.lang.StringBuilder
+import java.nio.channels.Channel
+import java.nio.channels.SocketChannel
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
-@Deprecated("Replaced with Message Channels")
-class MessageInputStreamReader(
-    private val input: InputStream
-) : MessageReader {
+class MessageStreamChannel 
 
-    @Throws(
-        IOException::class,
-        BadMessageException::class)
+@Throws(IOException::class) 
+constructor(private val channel: SocketChannel) : MessageChannel, Channel by channel {
+    
+    private val input: InputStream = channel.socket().getInputStream()
+    
+    private val output: OutputStream = channel.socket().getOutputStream()
+
+    @Throws(IOException::class, BadMessageException::class)
     override fun read(): Message {
         val inputStreamReader = InputStreamReader(input)
         val bufferedReader = BufferedReader(inputStreamReader)
@@ -48,10 +49,9 @@ class MessageInputStreamReader(
         return buildMessage(startLine, headers)
     }
 
-    @Throws(
-        IOException::class,
-        TimeoutException::class,
-        BadMessageException::class)
+    @Throws(IOException::class,
+            TimeoutException::class,
+            BadMessageException::class)
     override fun read(time: Int, unit: TimeUnit): Message {
         val timeout: Long = System.currentTimeMillis() + unit.toMillis(time.toLong())
         val inputStreamReader = InputStreamReader(input)
@@ -89,5 +89,22 @@ class MessageInputStreamReader(
         }
 
         return buildMessage(startLine, headers)
+    }
+
+    @Throws(IOException::class)
+    override fun write(message: Message) {
+        val writer = OutputStreamWriter(output, Charsets.UTF_8)
+        val builder = StringBuilder("${message.line}\r\n")
+
+        // Fetch headers.
+        message.headers.forEach { (key, value) ->
+            builder.append("$key: $value\r\n")
+        }
+        builder.append("\r\n")
+
+        // Fetch body, if there is a body.
+        message.body?.let { body -> builder.append(body)}
+
+        writer.write(builder.toString())
     }
 }

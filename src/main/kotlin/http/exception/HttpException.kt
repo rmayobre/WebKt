@@ -1,7 +1,6 @@
 package http.exception
 
 import http.Status
-import http.message.Request
 import http.message.Response
 import java.lang.Exception
 import java.util.*
@@ -93,7 +92,6 @@ open class HttpException : Exception {
 }
 
 class BadRequestException : HttpException {
-//    val request: Request?
     constructor() : super(Status.BAD_REQUEST)
     constructor(cause: Throwable) : super(cause, Status.BAD_REQUEST)
     constructor(message: String) : super(message, Status.BAD_REQUEST)

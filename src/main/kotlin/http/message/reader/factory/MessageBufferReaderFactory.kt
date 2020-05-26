@@ -6,6 +6,7 @@ import http.message.reader.factory.MessageReaderFactory
 import java.net.Socket
 import java.nio.channels.SocketChannel
 
+@Deprecated("Replaced with Message Channels")
 class MessageBufferReaderFactory(
     private val bufferSize: Int = 256
 ) : MessageReaderFactory {
