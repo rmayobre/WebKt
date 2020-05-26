@@ -5,6 +5,7 @@ import java.io.IOException
 import java.io.OutputStream
 import java.io.OutputStreamWriter
 
+@Deprecated("Replaced with Message Channels")
 class MessageOutputStreamWriter(
     private val output: OutputStream
 ) : MessageWriter {

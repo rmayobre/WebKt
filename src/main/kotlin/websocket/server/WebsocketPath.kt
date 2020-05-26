@@ -35,18 +35,16 @@ abstract class WebsocketPath(
             this(id, service, WebsocketSessionChannelFactory())
 
     @Throws(HttpException::class)
-    override fun onRequest(key: SelectionKey, request: Request): Message {
+    override fun onRequest(channel: SocketChannel, request: Request): Message { // TODO broken
         if (request.isWebsocketUpgrade()) {
             try {
                 val response: Handshake = onHandshake(request)
-                val channel: SocketChannel = (key.channel() as SocketChannel).apply {
-                    socket().apply {
-                        tcpNoDelay = false
-                        keepAlive = true
-                    }
+                channel.socket().apply {
+                    tcpNoDelay = false
+                    keepAlive = true
                 }
                 val session: WebsocketSession = factory.create(channel, request)
-                key.attach(session)
+//                key.attach(session)
                 sessions.add(session)
                 channel.register(selector, SelectionKey.OP_READ or SelectionKey.OP_WRITE)
                 onConnection(session)
@@ -156,10 +154,10 @@ abstract class WebsocketPath(
 
     /** An unexpected error occurred */
     protected abstract fun onError(ex: Exception)
-    
+
     companion object {
-        private fun Request.websocketKey(): String? = headers["Sec-WebSocket-Key"]
-        
+        fun Request.websocketKey(): String? = headers["Sec-WebSocket-Key"]
+
         private fun Request.isWebsocketUpgrade(): Boolean {
             return headers["Upgrade"] == "Websocket"
                     && headers["Connection"] == "Upgrade"

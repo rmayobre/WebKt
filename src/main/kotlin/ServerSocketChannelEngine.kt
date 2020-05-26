@@ -6,71 +6,95 @@ import java.nio.channels.ServerSocketChannel
 import java.nio.channels.SocketChannel
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
 
 abstract class ServerSocketChannelEngine(
+    address: InetSocketAddress,
     private val service: ExecutorService,
-    private val address: InetSocketAddress
-) : Thread(ENGINE_THREAD) {
+    private val name: String = DEFAULT_THREAD_NAME
+): ServerEngine<SocketChannel>(address), Runnable {
 
     private lateinit var serverSocketChannel: ServerSocketChannel
 
     private lateinit var selector: Selector
 
-    var isRunning: Boolean = false
-        private set
+    private lateinit var thread: Thread
+
+    private var running: Boolean = false
+
+    val isRunning: Boolean
+        get() = running && if (::thread.isInitialized) thread.isAlive else false
 
     override fun start() {
-        isRunning = true
+        running = true
         selector = Selector.open()
         serverSocketChannel = ServerSocketChannel.open().apply {
             bind(address)
             configureBlocking(false)
             register(selector, SelectionKey.OP_ACCEPT)
         }
-        super.start()
+        thread = Thread(this, name)
+        thread.start()
     }
 
     override fun run() {
-        while (isRunning) {
-            if (selector.select() > 0) {
-                val selectedKeys: Set<SelectionKey> = selector.selectedKeys()
-                selectedKeys.forEach { key ->
-                    if (key.isValid) {
-                        try {
+        while (running) {
+            if (selector.selectNow() > 0) {
+                val selectedKeys: MutableSet<SelectionKey> = selector.selectedKeys()
+                val iterator: MutableIterator<SelectionKey> = selectedKeys.iterator()
+                while(iterator.hasNext()) {
+                    val key: SelectionKey = iterator.next()
+                    iterator.remove()
+                    try {
+                        if (key.isValid) {
                             when {
                                 key.isAcceptable -> {
-                                    val channel: SocketChannel = serverSocketChannel.accept()
-                                    service.execute {
-                                        if (onAccept(channel)) {
-                                            channel.register(selector, CHANNEL_OPS)
-                                        } else {
-                                            channel.close()
+                                    serverSocketChannel.accept()?.let { channel ->
+                                        service.execute {
+                                            try {
+                                                if (onAccept(channel)) {
+                                                    channel.register(selector, SelectionKey.OP_READ)
+                                                } else {
+                                                    channel.close()
+                                                }
+                                            } catch (ex: Exception) {
+                                                onException(ex)
+                                            }
                                         }
                                     }
                                 }
 
-                                key.isReadable -> service.execute { onRead(key) }
+                                key.isReadable -> {
+                                    service.execute {
+                                        try {
+                                            onRead(key.channel() as SocketChannel)
+                                        } catch (ex: Exception) {
+                                            onException(ex)
+                                        }
+                                    }
+                                    key.cancel()
+                                }
                             }
-                        } catch (ex: IOException) {
-                            key.cancel()
-                        } catch (ex: Exception) {
-                            // Any exceptions not handled result in
-                            // a channel shutdown and key removal.
-                            key.channel().close()
-                            key.cancel()
                         }
+                    } catch (ex: Exception) {
+                        onException(ex)
                     }
                 }
             }
         }
     }
 
-    fun stop(
-        timeout: Long = TERMINATION_TIMEOUT_SECONDS,
-        timeUnit: TimeUnit = TimeUnit.SECONDS
-    ) {
-        isRunning = false
+    override fun stop() = stop(
+        timeout = DEFAULT_TIMEOUT_SECONDS,
+        timeUnit = TimeUnit.SECONDS
+    )
+
+    /**
+     * Stop the ServerSocketChannel and all running tasks.
+     * @param timeout How long the engine will wait for pending processes to finish before a forced shutdown.
+     * @param timeUnit The unit of time the engine will use to measure the timeout length.
+     */
+    fun stop(timeout: Long, timeUnit: TimeUnit) {
+        running = false
         try {
             service.shutdown()
             service.awaitTermination(timeout, timeUnit)
@@ -81,25 +105,20 @@ abstract class ServerSocketChannelEngine(
         serverSocketChannel.close()
     }
 
+
     /**
-     * Should this channel be accepted? It is encourage at this time to configure the channel before accepting.
-     * This will run on it's own thread.
-     * @return Return true if the engine registers the channel to the selector; false will close the channel
+     * Register channel back into selector.
+     * @throws IOException if channel cannot be registered to selector.
      */
     @Throws(IOException::class)
-    abstract fun onAccept(channel: SocketChannel): Boolean
-
-    /**
-     * SelectionKey has a channel with available data to read. This will run on it's own thread.
-     */
-    @Throws(IOException::class, TimeoutException::class)
-    abstract fun onRead(key: SelectionKey)
+    protected fun register(channel: SocketChannel) {
+        if (channel.isOpen) {
+            channel.register(selector, SelectionKey.OP_READ)
+        }
+    }
 
     companion object {
-        /** The executor will wait 60 seconds for it's tasks to finish before termination. */
-        private const val ENGINE_THREAD = "Channel-Engine-Thread"
-        /** Ops for the accepted channels. */
-        private const val CHANNEL_OPS = SelectionKey.OP_READ or SelectionKey.OP_WRITE
-        private const val TERMINATION_TIMEOUT_SECONDS = 60L
+        private const val DEFAULT_THREAD_NAME = "server-socket-channel-thread"
+        private const val DEFAULT_TIMEOUT_SECONDS = 60L
     }
 }
