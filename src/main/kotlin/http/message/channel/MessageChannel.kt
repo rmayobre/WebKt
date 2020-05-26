@@ -8,13 +8,15 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
 interface MessageChannel : Channel {
-    @Throws(IOException::class,
-            BadMessageException::class)
+    @Throws(
+        IOException::class,
+        BadMessageException::class)
     fun read(): Message
 
-    @Throws(IOException::class,
-            TimeoutException::class,
-            BadMessageException::class)
+    @Throws(
+        IOException::class,
+        TimeoutException::class,
+        BadMessageException::class)
     fun read(time: Int, unit: TimeUnit): Message
 
     @Throws(IOException::class)

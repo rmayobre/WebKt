@@ -10,12 +10,6 @@ import http.message.Response
 import http.message.channel.MessageChannel
 import http.message.channel.factory.MessageBufferChannelFactory
 import http.message.channel.factory.MessageChannelFactory
-import http.message.reader.factory.MessageBufferReaderFactory
-import http.message.writer.factory.MessageBufferWriterFactory
-import http.message.reader.factory.MessageReaderFactory
-import http.message.writer.factory.MessageWriterFactory
-import http.message.reader.MessageReader
-import http.message.writer.MessageWriter
 import http.path.Path
 import http.path.RunnablePath
 import java.io.IOException
@@ -83,7 +77,7 @@ open class HttpEngine protected constructor(
             if (message is Request) {
                 paths[message.path]?.onRequest(channel, message)?.also { response ->
                     messageChannel.write(response)
-                    // TODO check if connection needs to be closed
+                    // TODO close channel when connection header says so.
                 } ?: throw BadRequestException("Path does not exist.")
             } else {
                 throw BadRequestException("Expecting a Request to be sent.")
@@ -108,19 +102,12 @@ open class HttpEngine protected constructor(
         private val service: ExecutorService
     ) {
         private var factory: MessageChannelFactory = MessageBufferChannelFactory()
-
         private val exceptionHandlers: MutableMap<KClass<*>, HttpExceptionHandler<*>> = mutableMapOf()
-
         private var networkList: NetworkList = EmptyNetworkList()
-
         private var runnablePaths: MutableSet<RunnablePath> = mutableSetOf()
-
         private var paths: MutableMap<String, Path> = mutableMapOf()
-
         private var socketTimeout: Int = DEFAULT_SOCKET_TIMEOUT
-
         private var readTimeout: Int = DEFAULT_READ_TIMEOUT
-
         private var port: Int = DEFAULT_HTTP_PORT
 
         fun setPort(port: Int) = apply {

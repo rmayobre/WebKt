@@ -112,7 +112,9 @@ abstract class ServerSocketChannelEngine(
      */
     @Throws(IOException::class)
     protected fun register(channel: SocketChannel) {
-        channel.register(selector, SelectionKey.OP_READ)
+        if (channel.isOpen) {
+            channel.register(selector, SelectionKey.OP_READ)
+        }
     }
 
     companion object {
