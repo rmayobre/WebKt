@@ -1,7 +1,7 @@
 package example
 
 import http.HttpEngine
-import http.path.Path
+import http.route.Route
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.concurrent.*
@@ -10,11 +10,11 @@ class ExampleHttpServer(
     host: String,
     port: Int,
     service: ExecutorService,
-    paths: Set<Path>
+    routes: Set<Route>
 ) {
     private val engine = HttpEngine.Builder(host, service)
         .setPort(port)
-        .setPaths(paths)
+        .setRoutes(routes)
         .build()
 
     fun start() {
@@ -37,11 +37,11 @@ private val threadPool = ThreadPoolExecutor(1,3, 60, TimeUnit.SECONDS, LinkedBlo
 })
 
 fun main() {
-    val paths: Set<Path> = mutableSetOf<Path>().apply {
-        add(ExampleHttpPath())
+    val routes: Set<Route> = mutableSetOf<Route>().apply {
+        add(ExampleHttpRoute())
     }
 
-    val server = ExampleHttpServer("localhost", 8080, threadPool, paths)
+    val server = ExampleHttpServer("localhost", 8080, threadPool, routes)
     server.start()
 
     val inputStreamReader = InputStreamReader(System.`in`)

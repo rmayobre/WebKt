@@ -12,6 +12,11 @@ abstract class ServerEngine<T : Channel>(
 ) {
 
     /**
+     * Determine if Engine is running
+     */
+    abstract val isRunning: Boolean
+
+    /**
      * Start your engine.
      * @throws IOException thrown if engine could not open sockets.
      */

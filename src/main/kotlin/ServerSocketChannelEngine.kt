@@ -21,7 +21,7 @@ abstract class ServerSocketChannelEngine(
 
     private var running: Boolean = false
 
-    val isRunning: Boolean
+    override val isRunning: Boolean
         get() = running && if (::thread.isInitialized) thread.isAlive else false
 
     override fun start() {
@@ -52,6 +52,7 @@ abstract class ServerSocketChannelEngine(
                                         service.execute {
                                             try {
                                                 if (onAccept(channel)) {
+                                                    channel.configureBlocking(false)
                                                     channel.register(selector, SelectionKey.OP_READ)
                                                 } else {
                                                     channel.close()
@@ -93,7 +94,7 @@ abstract class ServerSocketChannelEngine(
      * @param timeout How long the engine will wait for pending processes to finish before a forced shutdown.
      * @param timeUnit The unit of time the engine will use to measure the timeout length.
      */
-    fun stop(timeout: Long, timeUnit: TimeUnit) {
+    protected fun stop(timeout: Long, timeUnit: TimeUnit) {
         running = false
         try {
             service.shutdown()
