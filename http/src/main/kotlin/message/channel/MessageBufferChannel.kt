@@ -101,7 +101,7 @@ class MessageBufferChannel(
 
     override fun write(message: Message) {
         val output: ByteArrayOutputStream = ByteArrayOutputStream().apply {
-            write(message.line.toByteArray())
+            write((message.line + "\n").toByteArray())
             write(message.headersToString().toByteArray())
             write("\r\n".toByteArray())
             message.body?.let { body -> write(body.toByteArray()) }
@@ -133,8 +133,8 @@ class MessageBufferChannel(
          */
         private fun Message.headersToString(): String {
             val builder = StringBuilder()
-            headers.forEach { (key: String, value: String) ->
-                builder.append("$key : $value")
+            headers.forEach { (key: String, value: String) -> // TODO make last line either return no \n or return \r\n
+                builder.append("$key : $value\n")
             }
             return builder.toString()
         }
