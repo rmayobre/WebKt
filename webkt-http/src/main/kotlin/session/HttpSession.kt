@@ -7,5 +7,6 @@ import java.nio.channels.Channel
 interface HttpSession : Closeable {
     val channel: Channel
     val request: Request
-    var keepAlive: Boolean
+    val keepAlive: Boolean
+    val isUpgrade: Boolean
 }

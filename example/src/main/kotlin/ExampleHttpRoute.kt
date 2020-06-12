@@ -15,9 +15,9 @@ class ExampleHttpRoute : RestfulRoute("/") {
 
     override fun onGet(session: HttpSession): Response {
         println("GET: ${session.request}")
-        session.keepAlive = false
         return Response.Builder(Status.OK)
             .addHeader("Content-Type", "text/html")
+            .addHeader("Connection", "close")
             .setBody(webSocketHTML)
             .build()
     }

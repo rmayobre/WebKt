@@ -50,7 +50,6 @@ abstract class WebsocketRoute(
                     sessions.add(it)
                 }
                 onConnection(websocketSession)
-//                session.keepAlive = true
                 return response
             } catch (ex: HandshakeException) {
                 throw BadRequestException("Handshake failed.")

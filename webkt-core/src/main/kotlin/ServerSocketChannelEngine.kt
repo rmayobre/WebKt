@@ -108,7 +108,7 @@ abstract class ServerSocketChannelEngine(
 
 
     /**
-     * Register channel back into selector.
+     * Register channel back into selector. Only registers channel if channel is open.
      * @throws IOException if channel cannot be registered to selector.
      */
     @Throws(IOException::class)
@@ -116,6 +116,14 @@ abstract class ServerSocketChannelEngine(
         if (channel.isOpen) {
             channel.register(selector, SelectionKey.OP_READ)
         }
+    }
+
+    /**
+     * Unregister channel from selector.
+     */
+    protected fun unregister(channel: SocketChannel) {
+        val key = channel.keyFor(selector)
+        key.cancel()
     }
 
     companion object {

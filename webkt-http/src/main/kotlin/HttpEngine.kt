@@ -84,10 +84,10 @@ open class HttpEngine protected constructor(
                 val session: HttpSession = sessionFactory.create(channel, message)
                 routes[message.path]?.onRoute(session)?.also { response ->
                     messageChannel.write(response)
-                    if (session.keepAlive) {
-                        register(channel)
-                    } else {
+                    if (!session.keepAlive) {
                         session.close()
+                    } else if (session.isUpgrade) {
+                        unregister(channel)
                     }
                 } ?: throw BadRequestException("Path does not exist.")
             } else {
