@@ -11,19 +11,16 @@
 <button>send</button>
 <div id=output></div>
 <script>
-    // http://www.websocket.org/echo.html
-
     var button = document.querySelector("button"),
         output = document.querySelector("#output"),
         textarea = document.querySelector("textarea"),
-        wsUri = "ws://127.0.0.1:8080/",
+        wsUri = "ws://127.0.0.1:8080/websocket",
         websocket = new WebSocket(wsUri);
 
     button.addEventListener("click", onClickButton);
 
     websocket.onopen = function (e) {
         writeToScreen("CONNECTED");
-        // doSend("WebSocket rocks");
     };
 
     websocket.onclose = function (e) {
@@ -52,7 +49,6 @@
 
     function onClickButton() {
         var text = textarea.value;
-
         text && doSend(text);
         textarea.value = "";
         textarea.focus();

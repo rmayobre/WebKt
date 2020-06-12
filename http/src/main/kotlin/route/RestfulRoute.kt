@@ -6,6 +6,9 @@ import http.exception.HttpException
 import http.message.Message
 import http.message.Response
 import http.session.HttpSession
+import java.io.File
+import java.net.URL
+import java.nio.file.Files
 
 open class RestfulRoute(override val path: String) : Route {
 
@@ -58,5 +61,37 @@ open class RestfulRoute(override val path: String) : Route {
     @Throws(HttpException::class)
     protected open fun onConnect(session: HttpSession): Response {
         throw BadRequestException("This path does not support CONNECT method.")
+    }
+
+    /**
+     * Loads a Web page from a resource file inside the resource directory. If
+     * resource could not be loaded, then sends back a 404 page.
+     * @param resource file from resource directory.
+     */
+    protected fun loadWebPageAsString(resource: String): String =
+        loadWebPageAsStringOrNull(resource) ?: WEB_PAGE_NOT_FOUND
+
+    /**
+     * Loads a Web page from a resource file inside the resource directory. If
+     * resource could not be loaded, returns null.
+     * @param resource file from resource directory.
+     */
+    protected fun loadWebPageAsStringOrNull(resource: String): String? =
+        (javaClass.classLoader.getResource(resource))?.let { resourceURL: URL ->
+            String(Files.readAllBytes(File(resourceURL.file).toPath()))
+        }
+
+    companion object {
+        private const val WEB_PAGE_NOT_FOUND: String = "<!DOCTYPE html>" +
+            "<html>" +
+            "<head>" +
+            "<title>404 Not Found</title>" +
+            "</head>" +
+            "<body>" +
+            "" +
+            "<h1>404 - Not Found.</h1>" +
+            "" +
+            "</body>" +
+            "</html>"
     }
 }

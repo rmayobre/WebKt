@@ -6,7 +6,7 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.concurrent.*
 
-class ExampleHttpServer(
+class ExampleServer(
     host: String,
     port: Int,
     service: ExecutorService,
@@ -28,10 +28,10 @@ class ExampleHttpServer(
     }
 }
 
-private val threadPool = ThreadPoolExecutor(1,3, 60, TimeUnit.SECONDS, LinkedBlockingDeque(), ThreadFactory { runnable ->
+private val threadPool = ThreadPoolExecutor(10,10, 60, TimeUnit.SECONDS, LinkedBlockingDeque(), ThreadFactory { runnable ->
     Thread(runnable).apply {
         setUncaughtExceptionHandler { thread, throwable ->
-            println("${thread.name} (Error): ${throwable.message}")
+            println("${thread.name} (Uncaught Error): ${throwable.message}")
         }
     }
 })
@@ -39,9 +39,10 @@ private val threadPool = ThreadPoolExecutor(1,3, 60, TimeUnit.SECONDS, LinkedBlo
 fun main() {
     val routes: Set<Route> = mutableSetOf<Route>().apply {
         add(ExampleHttpRoute())
+        add(ExampleWebsocketRoute(Executors.newFixedThreadPool(3)))
     }
 
-    val server = ExampleHttpServer("localhost", 8080, threadPool, routes)
+    val server = ExampleServer("localhost", 8080, threadPool, routes)
     server.start()
 
     val inputStreamReader = InputStreamReader(System.`in`)

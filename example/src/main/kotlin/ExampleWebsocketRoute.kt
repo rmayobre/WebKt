@@ -6,19 +6,10 @@ import websocket.Handshake
 import websocket.WebsocketException
 import websocket.server.WebsocketRoute
 import websocket.server.session.WebsocketSession
-import websocket.server.session.factory.WebsocketSessionChannelFactory
-import websocket.server.session.factory.WebsocketSessionFactory
 import java.lang.Exception
 import java.util.concurrent.ExecutorService
 
-class ExampleWebsocketRoute private constructor(
-    path: String,
-    service: ExecutorService,
-    factory: WebsocketSessionFactory
-) : WebsocketRoute(path, service, factory) {
-
-    constructor(path: String, service: ExecutorService):
-            this(path, service, WebsocketSessionChannelFactory())
+class ExampleWebsocketRoute(service: ExecutorService) : WebsocketRoute("/websocket", service) {
 
     override fun onHandshake(request: Request): Handshake {
         println("$path -> onHandshake: $request")

@@ -1,46 +1,29 @@
 package example
 
 import http.Status
-import http.message.Request
 import http.message.Response
 import http.route.RestfulRoute
 import http.session.HttpSession
 
-class ExampleHttpRoute(path: String = "/") : RestfulRoute(path) {
+class ExampleHttpRoute : RestfulRoute("/") {
+
+//    private val indexHTML: String
+//        get() = loadWebPageAsString(HTML_TEST_FILE)
+
+    private val webSocketHTML: String
+        get() = loadWebPageAsString(WEBSOCKET_TEST_FILE)
+
     override fun onGet(session: HttpSession): Response {
         println("GET: ${session.request}")
         session.keepAlive = false
         return Response.Builder(Status.OK)
             .addHeader("Content-Type", "text/html")
-            .setBody("<!DOCTYPE html>" +
-                "<html>" +
-                "<head>" +
-                "<title>Page Title</title>" +
-                "</head>" +
-                "<body>" +
-                "" +
-                "<h1>This is a Heading</h1>" +
-                "<p>This is a paragraph.</p>" +
-                "" +
-                "</body>" +
-                "</html>")
-//            .setBody("<!DOCTYPE html>\n" +
-//                "<html lang=\"en\">\n" +
-//                "<head>\n" +
-//                "    <meta charset=\"UTF-8\">\n" +
-//                "    <title>Hello World!</title>\n" +
-//                "</head>\n" +
-//                "<body>\n" +
-//                "\n" +
-//                "</body>\n" +
-//                "</html>")
-            .build().also {
-                println("Response: $it")
-            }
-//        return Response.Builder(Status.OK)
-//            .setBody("Successful GET request.")
-//            .build().also {
-//                println("Response: $it")
-//            }
+            .setBody(webSocketHTML)
+            .build()
+    }
+
+    companion object {
+//        private const val HTML_TEST_FILE = "html_test.html"
+        private const val WEBSOCKET_TEST_FILE = "websocket_test.html"
     }
 }

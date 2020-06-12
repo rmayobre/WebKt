@@ -3,6 +3,7 @@ package websocket.server
 import http.exception.BadRequestException
 import http.exception.HttpException
 import http.message.Message
+import http.message.Request
 import http.route.RunnableRoute
 import http.session.HttpSession
 import websocket.*
@@ -29,8 +30,7 @@ abstract class WebsocketRoute(
 
     protected val sessions: MutableSet<WebsocketSession> = mutableSetOf()
 
-    var running: Boolean = false
-        private set
+    private var running: Boolean = false
 
     override val isRunning: Boolean
         get() = running
@@ -46,10 +46,11 @@ abstract class WebsocketRoute(
                     keepAlive = true
                 }
                 val websocketSession: WebsocketSession = factory.create(channel, session.request).also {
-                    channel.register(selector, SelectionKey.OP_READ or SelectionKey.OP_WRITE, it)
+                    channel.register(selector, SelectionKey.OP_WRITE, it)
                     sessions.add(it)
                 }
                 onConnection(websocketSession)
+//                session.keepAlive = true
                 return response
             } catch (ex: HandshakeException) {
                 throw BadRequestException("Handshake failed.")
@@ -125,11 +126,11 @@ abstract class WebsocketRoute(
         }
     }
 
-    protected fun http.message.Request.websocketKey(): String? = headers["Sec-WebSocket-Key"]
+    protected fun Request.websocketKey(): String? = headers["Sec-WebSocket-Key"]
 
     /** New websocket upgrade request. */
     @Throws(HandshakeException::class)
-    protected abstract fun onHandshake(request: http.message.Request): Handshake
+    protected abstract fun onHandshake(request: Request): Handshake
 
     /** Newly connected Session. */
     @Throws(WebsocketException::class)
@@ -167,10 +168,11 @@ abstract class WebsocketRoute(
     protected abstract fun onError(ex: Exception)
 
     companion object {
-        private fun http.message.Request.isWebsocketUpgrade(): Boolean {
-            return headers["Upgrade"] == "Websocket"
-                && headers["Connection"] == "Upgrade"
-                && headers["Sec-WebSocket-Version"] == "13"
+        private fun Request.isWebsocketUpgrade(): Boolean {
+            return true
+//            return headers["Upgrade"] == "Websocket"
+//                && headers["Connection"] == "Upgrade"
+//                && headers["Sec-WebSocket-Version"] == "13"
         }
     }
 }
