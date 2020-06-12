@@ -13,9 +13,9 @@ class ExampleHttpRoute : RestfulRoute("/") {
     private val webSocketHTML: String
         get() = loadWebPageAsString(WEBSOCKET_TEST_FILE)
 
-    override fun onGet(session: HttpSession): Response {
+    override fun onGet(session: HttpSession) {
         println("GET: ${session.request}")
-        return Response.Builder(Status.OK)
+        session.response = Response.Builder(Status.OK)
             .addHeader("Content-Type", "text/html")
             .addHeader("Connection", "close")
             .setBody(webSocketHTML)

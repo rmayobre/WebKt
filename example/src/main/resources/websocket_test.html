@@ -34,6 +34,7 @@
     };
 
     websocket.onerror = function (e) {
+    	console.error("WebSocket error observed:", event);
         writeToScreen(e.code)
         writeToScreen("<span class=error>ERROR:</span> " + e.data);
     };

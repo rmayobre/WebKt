@@ -2,7 +2,6 @@ package websocket.server
 
 import http.exception.BadRequestException
 import http.exception.HttpException
-import http.message.Message
 import http.message.Request
 import http.route.RunnableRoute
 import http.session.HttpSession
@@ -36,7 +35,7 @@ abstract class WebsocketRoute(
         get() = running
 
     @Throws(HttpException::class)
-    override fun onRoute(session: HttpSession): Message {
+    override fun onRoute(session: HttpSession) {
         val channel: SocketChannel = session.channel as SocketChannel
         if (session.request.isWebsocketUpgrade()) {
             try {
@@ -46,11 +45,11 @@ abstract class WebsocketRoute(
                     keepAlive = true
                 }
                 val websocketSession: WebsocketSession = factory.create(channel, session.request).also {
-                    channel.register(selector, SelectionKey.OP_WRITE, it)
+                    channel.register(selector, SelectionKey.OP_READ, it)
                     sessions.add(it)
                 }
                 onConnection(websocketSession)
-                return response
+                session.response = response
             } catch (ex: HandshakeException) {
                 throw BadRequestException("Handshake failed.")
             }

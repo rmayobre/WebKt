@@ -104,7 +104,9 @@ class MessageBufferChannel(
             write((message.line + "\n").toByteArray())
             write(message.headersToString().toByteArray())
             write("\r\n".toByteArray())
-            message.body?.let { body -> write(body.toByteArray()) }
+            message.body?.let { body ->
+                write(body.toByteArray())
+            }
             write("\r\n".toByteArray())
         }
         channel.write(ByteBuffer.wrap(output.toByteArray()))
@@ -133,9 +135,19 @@ class MessageBufferChannel(
          */
         private fun Message.headersToString(): String {
             val builder = StringBuilder()
-            headers.forEach { (key: String, value: String) -> // TODO make last line either return no \n or return \r\n
-                builder.append("$key : $value\n")
+            val iterator: Iterator<Map.Entry<String, String>> = headers.entries.iterator()
+            while (iterator.hasNext()) {
+                val entry: Map.Entry<String, String> = iterator.next()
+                if (iterator.hasNext()) {
+                    builder.append("${entry.key} : ${entry.value}\n")
+                } else {
+                    builder.append("${entry.key} : ${entry.value}")
+                }
             }
+
+//            headers.forEach { (key: String, value: String) -> // TODO make last line either return no \n or return \r\n
+//                builder.append("$key : $value\n")
+//            }
             return builder.toString()
         }
     }

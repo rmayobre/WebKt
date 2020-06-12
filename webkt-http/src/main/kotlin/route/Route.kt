@@ -8,5 +8,5 @@ interface Route {
     val path: String
 
     @Throws(HttpException::class)
-    fun onRoute(session: HttpSession): Message
+    fun onRoute(session: HttpSession)
 }

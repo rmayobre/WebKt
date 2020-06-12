@@ -65,7 +65,7 @@ open class HttpEngine protected constructor(
         super.start()
     }
 
-    override fun onAccept(channel: SocketChannel): Boolean =
+    override fun onAccept(channel: SocketChannel): Boolean = // TODO intercept new channels?
             networkList.permits(channel.socket().inetAddress).also { isPermitted ->
                 if (isPermitted) {
                     channel.socket().soTimeout = socketTimeout
@@ -82,8 +82,8 @@ open class HttpEngine protected constructor(
             val message: Message = messageChannel.read(readTimeout, TimeUnit.MILLISECONDS)
             if (message is http.message.Request) {
                 val session: HttpSession = sessionFactory.create(channel, message)
-                routes[message.path]?.onRoute(session)?.also { response ->
-                    messageChannel.write(response)
+                routes[message.path]?.onRoute(session)?.also {
+                    messageChannel.write(session.response)
                     if (!session.keepAlive) {
                         session.close()
                     } else if (session.isUpgrade) {
@@ -93,17 +93,19 @@ open class HttpEngine protected constructor(
             } else {
                 throw BadRequestException("Expecting a Request to be sent.")
             }
-        } catch (ex: HttpException) {
+        } catch (ex: HttpException) { // TODO HttpException interceptor
             println("HttpException (Message): ${ex.message}")
             println("HttpException (Reason): ${ex.reason}")
             println("HttpException (Response): ${ex.response}")
             println("HttpException (Body): ${ex.body}")
             messageChannel.write(exceptionHandlers.getResponse(ex, ex::class))
             channel.close()
+        } catch (ex: Exception) {
+            TODO("send back a 500 error.")
         }
     }
 
-    override fun onException(ex: Exception) {
+    override fun onException(ex: Exception) { // TODO replace logs with exception handler.
         println("Exception: ${ex.message}")
         println("Exception: ${ex.stackTrace}")
     }
