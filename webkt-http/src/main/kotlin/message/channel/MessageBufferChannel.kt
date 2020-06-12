@@ -133,8 +133,15 @@ class MessageBufferChannel(
          * Convert the headers map from Message into a String.
          * @return a String of a Message's headers.
          */
-        private fun Message.headersToString(): String {
+        private fun Message.headersToString(): String { // TODO Fix response parsing.
             val builder = StringBuilder()
+
+            //
+            // REMINDER - Do ALL non-SSL testing on Chrome!
+            //
+
+
+            // TODO this works for Websocket Handshakes.
             val iterator: Iterator<Map.Entry<String, String>> = headers.entries.iterator()
             while (iterator.hasNext()) {
                 val entry: Map.Entry<String, String> = iterator.next()
@@ -145,6 +152,7 @@ class MessageBufferChannel(
                 }
             }
 
+            //TODO this works for HTML page responses.
 //            headers.forEach { (key: String, value: String) -> // TODO make last line either return no \n or return \r\n
 //                builder.append("$key : $value\n")
 //            }
