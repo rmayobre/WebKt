@@ -13,9 +13,9 @@ repositories {
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 
-    implementation project(':core')
-    implementation project(':http')
-    implementation project(':websocket')
+    implementation project(':webkt-core')
+    implementation project(':webkt-http')
+    implementation project(':webkt-websocket')
 
     testImplementation "junit:junit:4.12"
 }

@@ -12,7 +12,7 @@ repositories {
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    implementation project(':core')
+    implementation project(':webkt-http')
     testImplementation "junit:junit:4.12"
     testImplementation "io.mockk:mockk:1.8.13"
 }
