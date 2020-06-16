@@ -1,2 +1,6 @@
 rootProject.name = 'WebKt'
 
+include 'webkt-core'
+include 'webkt-http'
+include 'webkt-websocket'
+include 'example'
