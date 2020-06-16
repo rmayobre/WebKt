@@ -5,60 +5,33 @@ import http.message.Response
 import java.lang.Exception
 import java.util.*
 
-open class HttpException : Exception {
-
-    val status: Status
-
-    val reason: String
+open class HttpException private constructor(
+    val status: Status,
+    val reason: String,
+    var body: String,
+    message: String,
+    cause: Throwable? = null
+) : Exception(message, cause) {
 
     val headers: MutableMap<String, String> = mutableMapOf()
-        get() = field.apply {
-            put("Content-Length", body.length.toString())
-        }
-
-    var body: String
 
     val response: Response
         get() = Response.Builder(status)
-            .addHeader("Content-Type", DEFAULT_CONTENT_TYPE)
+            .addHeaders(headers)
             .addHeader("Content-Length", body.length.toString())
-            .addHeader("Connection", "close")
             .setBody(body)
             .build()
 
-    constructor(status: Status) : super() {
-        this.status = status
-        reason = ""
-        body = StringBuilder().apply {
-            append("{")
-            append("\"timestamp\" : ${Date().time},")
-            append("\"status\" : ${status.code},")
-            append("\"message\" : \"${status.message}\",")
-            append("\"reason\" : \"$reason\"")
-            append("}")
-        }.toString()
+    init {
         headers["Content-Type"] = DEFAULT_CONTENT_TYPE
         headers["Connection"] = "close"
     }
 
-    constructor(cause: Throwable, status: Status) : super(cause) {
-        this.status = status
-        reason = ""
-        body = StringBuilder().apply {
-            append("{")
-            append("\"timestamp\" : ${Date().time},")
-            append("\"status\" : ${status.code},")
-            append("\"message\" : \"${status.message}\",")
-            append("\"reason\" : \"$reason\"")
-            append("}")
-        }.toString()
-        headers["Content-Type"] = DEFAULT_CONTENT_TYPE
-        headers["Connection"] = "close"
-    }
+    constructor(status: Status, cause: Throwable) : this(status, "", cause)
 
-    constructor(message: String, status: Status) : super(message) {
-        this.status = status
-        reason = message
+    constructor(status: Status, reason: String = "", cause: Throwable? = null) : this(
+        status = status,
+        reason = reason,
         body = StringBuilder().apply {
             append("{")
             append("\"timestamp\" : ${Date().time},")
@@ -66,25 +39,17 @@ open class HttpException : Exception {
             append("\"message\" : \"${status.message}\",")
             append("\"reason\" : \"$reason\"")
             append("}")
-        }.toString()
-        headers["Content-Type"] = DEFAULT_CONTENT_TYPE
-        headers["Connection"] = "close"
-    }
+        }.toString(),
+        cause = cause
+    )
 
-    constructor(message: String, cause: Throwable, status: Status) : super(message, cause) {
-        this.status = status
-        reason = message
-        body = StringBuilder().apply {
-            append("{")
-            append("\"timestamp\" : ${Date().time},")
-            append("\"status\" : ${status.code},")
-            append("\"message\" : \"${status.message}\",")
-            append("\"reason\" : \"$reason\"")
-            append("}")
-        }.toString()
-        headers["Content-Type"] = DEFAULT_CONTENT_TYPE
-        headers["Connection"] = "close"
-    }
+    constructor(status: Status, body: String, reason: String = "", cause: Throwable? = null) : this(
+        status = status,
+        reason = reason,
+        body = body,
+        message = status.message,
+        cause = cause
+    )
 
     companion object {
         private const val DEFAULT_CONTENT_TYPE = "application/json"
@@ -93,7 +58,14 @@ open class HttpException : Exception {
 
 class BadRequestException : HttpException {
     constructor() : super(Status.BAD_REQUEST)
-    constructor(cause: Throwable) : super(cause, Status.BAD_REQUEST)
-    constructor(message: String) : super(message, Status.BAD_REQUEST)
-    constructor(message: String, cause: Throwable) : super(message, cause, Status.BAD_REQUEST)
+    constructor(cause: Throwable) : super(Status.BAD_REQUEST, cause)
+    constructor(reason: String) : super(Status.BAD_REQUEST, reason)
+    constructor(reason: String, cause: Throwable) : super(Status.BAD_REQUEST, reason, cause)
+}
+
+class NotFoundException : HttpException {
+    constructor() : super(Status.NOT_FOUND)
+    constructor(cause: Throwable) : super(Status.NOT_FOUND, cause)
+    constructor(reason: String) : super(Status.NOT_FOUND, reason)
+    constructor(reason: String, cause: Throwable) : super(Status.NOT_FOUND, reason, cause)
 }

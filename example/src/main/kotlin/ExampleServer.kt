@@ -13,6 +13,8 @@ class ExampleServer(
     routes: Set<Route>
 ) {
     private val engine = HttpEngine.Builder(host, service)
+        .addExceptionHandler(ExampleExceptionHandler())
+        .addHttpExceptionHandler(ExampleHttpExceptionInterceptor())
         .setPort(port)
         .setRoutes(routes)
         .build()
@@ -26,30 +28,4 @@ class ExampleServer(
     fun stop() {
         engine.stop()
     }
-}
-
-private val threadPool = ThreadPoolExecutor(10,10, 60, TimeUnit.SECONDS, LinkedBlockingDeque(), ThreadFactory { runnable ->
-    Thread(runnable).apply {
-        setUncaughtExceptionHandler { thread, throwable ->
-            println("${thread.name} (Uncaught Error): ${throwable.message}")
-        }
-    }
-})
-
-fun main() {
-    val routes: Set<Route> = mutableSetOf<Route>().apply {
-        add(ExampleHttpRoute())
-        add(ExampleWebsocketRoute(Executors.newFixedThreadPool(3)))
-    }
-
-    val server = ExampleServer("localhost", 8080, threadPool, routes)
-    server.start()
-
-    val inputStreamReader = InputStreamReader(System.`in`)
-    val bufferReader = BufferedReader(inputStreamReader)
-    var line: String = bufferReader.readLine()
-    while (line != "exit") {
-        line = bufferReader.readLine()
-    }
-    server.stop()
 }

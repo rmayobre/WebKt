@@ -166,11 +166,18 @@ abstract class WebsocketRoute(
     protected abstract fun onError(ex: Exception)
 
     companion object {
+        private const val WEBSOCKET_UPGRADE_VALUE = "websocket"
+        private val WEBSOCKET_UPGRADE_REGEX = Regex(".*\\b$WEBSOCKET_UPGRADE_VALUE\\b.*")
+
+        private const val WEBSOCKET_CONNECTION_VALUE = "upgrade"
+        private val WEBSOCKET_CONNECTION_REGEX = Regex(".*\\b$WEBSOCKET_CONNECTION_VALUE\\b.*")
+
+        private const val WEBSOCKET_SEC_VERSION_VALUE = "13"
+
         private fun Request.isWebsocketUpgrade(): Boolean {
-            return true
-//            return headers["Upgrade"] == "Websocket"
-//                && headers["Connection"] == "Upgrade"
-//                && headers["Sec-WebSocket-Version"] == "13"
+            return headers["Upgrade"]?.toLowerCase()?.matches(WEBSOCKET_UPGRADE_REGEX) ?: false
+                && headers["Connection"]?.toLowerCase()?.matches(WEBSOCKET_CONNECTION_REGEX) ?: false
+                && headers["Sec-WebSocket-Version"] == WEBSOCKET_SEC_VERSION_VALUE
         }
     }
 }

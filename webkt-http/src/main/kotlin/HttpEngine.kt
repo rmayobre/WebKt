@@ -2,8 +2,9 @@ package http
 
 import ServerSocketChannelEngine
 import http.exception.BadRequestException
+import http.exception.ExceptionHandler
 import http.exception.HttpException
-import http.exception.HttpExceptionHandler
+import http.exception.HttpExceptionInterceptor
 import http.message.Message
 import http.message.Response
 import http.message.channel.MessageChannel
@@ -28,7 +29,8 @@ import kotlin.reflect.KClass
 open class HttpEngine protected constructor(
     private val factory: MessageChannelFactory,
     private val sessionFactory: HttpSessionFactory<SocketChannel>,
-    private val exceptionHandlers: Map<KClass<*>, HttpExceptionHandler<*>>,
+    private val httpExceptionHandlers: Map<KClass<*>, HttpExceptionInterceptor<*>>,
+    private val exceptionHandlers: List<ExceptionHandler>,
     private val networkList: NetworkList,
     private val routes: Map<String, Route>,
     private val socketTimeout: Int,
@@ -37,22 +39,6 @@ open class HttpEngine protected constructor(
     host: String,
     port: Int
 ) : ServerSocketChannelEngine(InetSocketAddress(host, port), service) {
-
-    constructor(host: String, service: ExecutorService):
-        this(host, DEFAULT_HTTP_PORT, service)
-
-    constructor(host: String, port: Int, service: ExecutorService) : this(
-        factory = MessageBufferChannelFactory(),
-        sessionFactory = SocketChannelHttpSessionFactory(),
-        exceptionHandlers = mutableMapOf(),
-        networkList = EmptyNetworkList(),
-        routes = mutableMapOf(),
-        socketTimeout = DEFAULT_SOCKET_TIMEOUT,
-        readTimeout = DEFAULT_READ_TIMEOUT,
-        service = service,
-        host = host,
-        port = port
-    )
 
     override fun start() {
         synchronized(routes) {
@@ -65,7 +51,7 @@ open class HttpEngine protected constructor(
         super.start()
     }
 
-    override fun onAccept(channel: SocketChannel): Boolean = // TODO intercept new channels?
+    override fun onAccept(channel: SocketChannel): Boolean =
             networkList.permits(channel.socket().inetAddress).also { isPermitted ->
                 if (isPermitted) {
                     channel.socket().soTimeout = socketTimeout
@@ -82,32 +68,27 @@ open class HttpEngine protected constructor(
             val message: Message = messageChannel.read(readTimeout, TimeUnit.MILLISECONDS)
             if (message is http.message.Request) {
                 val session: HttpSession = sessionFactory.create(channel, message)
-                routes[message.path]?.onRoute(session)?.also {
+                routes[message.path]?.onRoute(session).also {
                     messageChannel.write(session.response)
                     if (!session.keepAlive) {
                         session.close()
                     } else if (session.isUpgrade) {
                         unregister(channel)
                     }
-                } ?: throw BadRequestException("Path does not exist.")
+                } ?: throw BadRequestException("Path (path = \"${message.path}\") does not exist.")
             } else {
                 throw BadRequestException("Expecting a Request to be sent.")
             }
-        } catch (ex: HttpException) { // TODO HttpException interceptor
-            println("HttpException (Message): ${ex.message}")
-            println("HttpException (Reason): ${ex.reason}")
-            println("HttpException (Response): ${ex.response}")
-            println("HttpException (Body): ${ex.body}")
-            messageChannel.write(exceptionHandlers.getResponse(ex, ex::class))
+        } catch (ex: HttpException) {
+            messageChannel.write(httpExceptionHandlers.getResponse(ex, ex::class))
             channel.close()
-        } catch (ex: Exception) {
-            TODO("send back a 500 error.")
         }
     }
 
-    override fun onException(ex: Exception) { // TODO replace logs with exception handler.
-        println("Exception: ${ex.message}")
-        println("Exception: ${ex.stackTrace}")
+    override fun onException(ex: Exception) {
+        exceptionHandlers.forEach {
+            it.onException(ex)
+        }
     }
 
     data class Builder(
@@ -116,7 +97,8 @@ open class HttpEngine protected constructor(
     ) {
         private var factory: MessageChannelFactory = MessageBufferChannelFactory()
         private var sessionFactory: HttpSessionFactory<SocketChannel> = SocketChannelHttpSessionFactory()
-        private val exceptionHandlers: MutableMap<KClass<*>, HttpExceptionHandler<*>> = mutableMapOf()
+        private val httpExceptionHandlers: MutableMap<KClass<*>, HttpExceptionInterceptor<*>> = mutableMapOf()
+        private val exceptionHandlers: MutableList<ExceptionHandler> = mutableListOf()
         private var networkList: NetworkList = EmptyNetworkList()
         private var routes: MutableMap<String, Route> = mutableMapOf()
         private var socketTimeout: Int = DEFAULT_SOCKET_TIMEOUT
@@ -139,8 +121,12 @@ open class HttpEngine protected constructor(
             networkList = list
         }
 
-        fun addExceptionHandler(handler: HttpExceptionHandler<*>) = apply {
-            exceptionHandlers[handler.type] = handler
+        fun addHttpExceptionHandler(handler: HttpExceptionInterceptor<*>) = apply {
+            httpExceptionHandlers[handler.type] = handler
+        }
+
+        fun addExceptionHandler(handler: ExceptionHandler) = apply {
+            exceptionHandlers.add(handler)
         }
 
         fun setRoutes(routes: Set<Route>) = apply {
@@ -164,6 +150,7 @@ open class HttpEngine protected constructor(
         fun build() = HttpEngine(
             factory = factory,
             sessionFactory = sessionFactory,
+            httpExceptionHandlers = httpExceptionHandlers,
             exceptionHandlers = exceptionHandlers,
             networkList = networkList,
             routes = routes,
@@ -181,9 +168,9 @@ open class HttpEngine protected constructor(
         private const val DEFAULT_READ_TIMEOUT = 30000
 
         @Suppress("UNCHECKED_CAST")
-        private fun <T : HttpException> Map<KClass<*>, HttpExceptionHandler<*>>.getResponse(exception: HttpException, type: KClass<T>): Response {
-            val handler: HttpExceptionHandler<T>? =  get(type)?.let { it as HttpExceptionHandler<T> }
-            return handler?.handle(exception as T) ?: exception.response
+        private fun <T : HttpException> Map<KClass<*>, HttpExceptionInterceptor<*>>.getResponse(exception: HttpException, type: KClass<T>): Response {
+            val handler: HttpExceptionInterceptor<T>? =  get(type)?.let { it as HttpExceptionInterceptor<T> }
+            return handler?.onException(exception as T) ?: exception.response
         }
     }
 }

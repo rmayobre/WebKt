@@ -1,8 +1,13 @@
 package http.route
 
 import http.Method
+import http.Status
+import http.content.ContentType
+import http.content.TextType
 import http.exception.BadRequestException
 import http.exception.HttpException
+import http.exception.NotFoundException
+import http.message.Response
 import http.session.HttpSession
 import java.io.File
 import java.net.URL
@@ -63,35 +68,47 @@ open class RestfulRoute(override val path: String) : Route {
         throw BadRequestException("This path does not support CONNECT method.")
     }
 
+    protected fun HttpSession.loadResourceAsResponse(resource: String, contentType: ContentType) {
+        response = loadResourceAsStringOrNull(resource)?.let { resourceStr ->
+            Response.Builder(Status.OK)
+                .addHeader("Content-Type", contentType.headerValue)
+                .addHeader("Connection", "close")
+                .setBody(resourceStr)
+                .build()
+        } ?: when (contentType) {
+            is TextType -> if (contentType.subType == "html") {
+                Response.Builder(Status.NOT_FOUND)
+                    .addHeader("Content-Type", contentType.headerValue)
+                    .addHeader("Connection", "close")
+                    .setBody(loadResourceAsString(DEFAULT_NOT_FOUND_HTML))
+                    .build()
+            } else {
+                throw NotFoundException()
+            }
+            else -> throw NotFoundException()
+        }
+
+    }
+
     /**
      * Loads a Web page from a resource file inside the resource directory. If
      * resource could not be loaded, then sends back a 404 page.
      * @param resource file from resource directory.
      */
-    protected fun loadWebPageAsString(resource: String): String =
-        loadWebPageAsStringOrNull(resource) ?: WEB_PAGE_NOT_FOUND
+    protected fun loadResourceAsString(resource: String): String =
+        loadResourceAsStringOrNull(resource) ?: throw NotFoundException()
 
     /**
      * Loads a Web page from a resource file inside the resource directory. If
      * resource could not be loaded, returns null.
      * @param resource file from resource directory.
      */
-    protected fun loadWebPageAsStringOrNull(resource: String): String? =
+    protected fun loadResourceAsStringOrNull(resource: String): String? =
         (javaClass.classLoader.getResource(resource))?.let { resourceURL: URL ->
             String(Files.readAllBytes(File(resourceURL.file).toPath()))
         }
 
     companion object {
-        private const val WEB_PAGE_NOT_FOUND: String = "<!DOCTYPE html>" +
-            "<html>" +
-            "<head>" +
-            "<title>404 Not Found</title>" +
-            "</head>" +
-            "<body>" +
-            "" +
-            "<h1>404 - Not Found.</h1>" +
-            "" +
-            "</body>" +
-            "</html>"
+        private const val DEFAULT_NOT_FOUND_HTML = "DEFAULT_404_NOT_FOUND.html"
     }
 }

@@ -25,6 +25,12 @@ data class Response(
 
         fun addHeader(key: String, value: String) = apply { headers[key] = value }
 
+        fun addHeaders(headers: Map<String, String>) = apply {
+            headers.forEach { (key, value) ->
+                this@Builder.headers[key] = value
+            }
+        }
+
         fun setBody(body: String) = apply { this.body = body }
 
         fun build(): Response = Response(status, version, statusLine, headers, body)

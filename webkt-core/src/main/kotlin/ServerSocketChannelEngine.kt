@@ -122,8 +122,8 @@ abstract class ServerSocketChannelEngine(
      * Unregister channel from selector.
      */
     protected fun unregister(channel: SocketChannel) {
-        val key = channel.keyFor(selector)
-        key.cancel()
+        val key: SelectionKey? = channel.keyFor(selector)
+        key?.cancel()
     }
 
     companion object {
