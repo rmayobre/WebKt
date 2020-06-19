@@ -1,6 +1,9 @@
 # WebKt
 An extremely lightweight networking library that only uses native java libraries (also native Kotlin libraries). This library supports HTTP, as well as Websockets, and follows [RFC 6455](https://tools.ietf.org/html/rfc6455) guidelines. This library is dedicated to serving as a lightweight server or client networking library for smaller systems. A background server process (such as Apache Tomcat or Jetty) will not be needed as this library will do all the HTTP processing for you (if you wish). WebKt is designed with choice in mind. A lot of the classes and interfaces are designed with the idea for the developer to take what they like, and make the rest. All parts of this library are modular, and all code is licensed to remain open-sourced.
 
+# Current State
+WebKt is still in a alpha/beta state, and many of the APIs and overall functionality can change dramatically before entering release state, version 1.0.0. To speed up any of the process, input is always appreciated and bug reports help. 
+
 # Features
 * Supports Java 8 (anything later has not be tested yet).
 * Non-blocking channels for server-side implementations.
