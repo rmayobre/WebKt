@@ -2,8 +2,6 @@ package example
 
 import http.HttpEngine
 import http.route.Route
-import java.io.BufferedReader
-import java.io.InputStreamReader
 import java.util.concurrent.*
 
 class ExampleServer(

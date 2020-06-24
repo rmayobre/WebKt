@@ -160,7 +160,7 @@ class SSLSocketChannel(
 
     @Synchronized
     @Throws(IOException::class)
-    fun performHandshake(): Boolean {
+    fun performHandshake(): Boolean { // TODO perform handshake isnt working
         var isComplete = false
         while (!isComplete && isOpen) {
             when (engine.handshakeStatus) {
