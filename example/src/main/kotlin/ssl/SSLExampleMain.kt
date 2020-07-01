@@ -16,10 +16,6 @@ import javax.net.ssl.SSLSocket
 
 import javax.net.ssl.SSLSocketFactory
 
-
-
-
-
 private val threadPool = ThreadPoolExecutor(10, 10, 60, TimeUnit.SECONDS, LinkedBlockingDeque(), ThreadFactory { runnable ->
     Thread(runnable).apply {
         setUncaughtExceptionHandler { thread, throwable ->
@@ -30,7 +26,7 @@ private val threadPool = ThreadPoolExecutor(10, 10, 60, TimeUnit.SECONDS, Linked
 
 private val context: SSLContext = SSLContext.getDefault()
 
-object ExampleSSLServerEngine: SSLServerSocketChannelEngine(
+private object ExampleSSLServerEngine: SSLServerSocketChannelEngine(
     context = context,
     address = InetSocketAddress("localhost", 8080),
     service = threadPool

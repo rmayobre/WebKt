@@ -41,10 +41,10 @@ class SSLSocketChannel(
         get() = engine.session
 
     /** Default client-side constructor. */
-    constructor(host: String, port: Int): this(SSLContext.getDefault(), host, port)
+    constructor(host: String, port: Int) : this(SSLContext.getDefault(), host, port)
 
     /** Client-side constructor. */
-    constructor(context: SSLContext, host: String, port: Int): this(SocketChannel.open(), context.createSSLEngine(host, port)) {
+    constructor(context: SSLContext, host: String, port: Int) : this(SocketChannel.open(), context.createSSLEngine(host, port)) {
         engine.useClientMode = true
     }
 
@@ -58,13 +58,32 @@ class SSLSocketChannel(
         encryptedPeerData = ByteBuffer.allocateDirect(session.packetBufferSize)
     }
 
-    override fun isOpen(): Boolean = channel.isOpen
-
+    @Synchronized
     @Throws(IOException::class)
-    override fun close() {
-        engine.closeOutbound()
-        performHandshake()
-        channel.close()
+    override fun write(buffer: ByteBuffer): Int {
+        var bytesWritten = 0
+
+        while (buffer.hasRemaining()) {
+            encryptedData.clear()
+            val result: SSLEngineResult = engine.wrap(buffer, encryptedData)
+            when (result.status) {
+                OK -> {
+                    encryptedData.flip()
+                    while (encryptedData.hasRemaining()) {
+                        bytesWritten += channel.write(encryptedData)
+                    }
+                }
+                BUFFER_UNDERFLOW -> throw SSLException("Buffer underflow occurred while writing.")
+                BUFFER_OVERFLOW -> throw SSLException("Buffer overflow occurred while writing.")
+                CLOSED -> {
+                    close()
+                    return bytesWritten
+                }
+                else -> throw IllegalStateException("SSLEngineResult status: ${result.status}, could not be determined while writing to channel.")
+            }
+        }
+
+        return bytesWritten
     }
 
     @Synchronized
@@ -105,32 +124,11 @@ class SSLSocketChannel(
         return decryptedPeerData.copyBytesTo(buffer)
     }
 
-    @Synchronized
     @Throws(IOException::class)
-    override fun write(buffer: ByteBuffer): Int {
-        var bytesWritten = 0
-
-        while (buffer.hasRemaining()) {
-            encryptedData.clear()
-            val result: SSLEngineResult = engine.wrap(buffer, encryptedData)
-            when (result.status) {
-                OK -> {
-                    encryptedData.flip()
-                    while (encryptedData.hasRemaining()) {
-                        bytesWritten += channel.write(encryptedData)
-                    }
-                }
-                BUFFER_UNDERFLOW -> throw SSLException("Buffer underflow occurred while writing.")
-                BUFFER_OVERFLOW -> throw SSLException("Buffer overflow occurred while writing.")
-                CLOSED -> {
-                    close()
-                    return bytesWritten
-                }
-                else -> throw IllegalStateException("SSLEngineResult status: ${result.status}, could not be determined while writing to channel.")
-            }
-        }
-
-        return bytesWritten
+    override fun close() {
+        engine.closeOutbound()
+        performHandshake()
+        channel.close()
     }
 
     /**
@@ -160,7 +158,7 @@ class SSLSocketChannel(
 
     @Synchronized
     @Throws(IOException::class)
-    fun performHandshake(): Boolean { // TODO perform handshake isnt working
+    fun performHandshake(): Boolean {
         var isComplete = false
         while (!isComplete && isOpen) {
             when (engine.handshakeStatus) {
@@ -249,7 +247,7 @@ class SSLSocketChannel(
             }
 
             encryptedPeerData.flip()
-            val result: SSLEngineResult = engine.wrap(encryptedPeerData, decryptedPeerData)
+            val result: SSLEngineResult = engine.unwrap(encryptedPeerData, decryptedPeerData)
             encryptedPeerData.compact()
 
             return when (result.status) {
