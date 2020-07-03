@@ -6,12 +6,13 @@ import java.nio.channels.ServerSocketChannel
 import java.nio.channels.SocketChannel
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 abstract class ServerSocketChannelEngine(
-    address: InetSocketAddress,
+    override val address: InetSocketAddress,
     private val service: ExecutorService,
     private val name: String = DEFAULT_THREAD_NAME
-): ServerEngine<SocketChannel>(address), Runnable {
+): ServerEngine, Runnable {
 
     private lateinit var serverSocketChannel: ServerSocketChannel
 
@@ -48,26 +49,31 @@ abstract class ServerSocketChannelEngine(
                         if (key.isValid) {
                             when {
                                 key.isAcceptable -> {
-                                    serverSocketChannel.accept()?.let { channel ->
-                                        service.execute {
-                                            try {
-                                                if (onAccept(channel)) {
-                                                    channel.configureBlocking(false)
-                                                    channel.register(selector, SelectionKey.OP_READ)
-                                                } else {
-                                                    channel.close()
-                                                }
-                                            } catch (ex: Exception) {
-                                                onException(ex)
-                                            }
-                                        }
+                                    try {
+                                        onAccept(key)
+                                    } catch (ex: Exception) {
+                                        onException(ex)
                                     }
+//                                    serverSocketChannel.accept()?.let { channel ->
+//                                        service.execute {
+//                                            try {
+//                                                if (onAccept(channel)) {
+//                                                    channel.configureBlocking(false)
+//                                                    channel.register(selector, SelectionKey.OP_READ)
+//                                                } else {
+//                                                    channel.close()
+//                                                }
+//                                            } catch (ex: Exception) {
+//                                                onException(ex)
+//                                            }
+//                                        }
+//                                    }
                                 }
 
                                 key.isReadable -> {
                                     service.execute {
                                         try {
-                                            onRead(key.channel() as SocketChannel)
+                                            onRead(key)
                                         } catch (ex: Exception) {
                                             onException(ex)
                                         }
@@ -112,9 +118,20 @@ abstract class ServerSocketChannelEngine(
      * @throws IOException if channel cannot be registered to selector.
      */
     @Throws(IOException::class)
-    protected fun register(channel: SocketChannel) {
+    protected fun register(channel: SocketChannel, operation: Int = SelectionKey.OP_READ) {
         if (channel.isOpen) {
-            channel.register(selector, SelectionKey.OP_READ)
+            channel.register(selector, operation)
+        }
+    }
+
+    /**
+     * Register channel back into selector. Only registers channel if channel is open.
+     * @throws IOException if channel cannot be registered to selector.
+     */
+    @Throws(IOException::class)
+    protected fun register(channel: SocketChannel, attachment: Any, operation: Int = SelectionKey.OP_READ) {
+        if (channel.isOpen) {
+            channel.register(selector, operation, attachment)
         }
     }
 
@@ -126,8 +143,31 @@ abstract class ServerSocketChannelEngine(
         key?.cancel()
     }
 
+    /**
+     * A new connection was made, as well as a new channel was constructed. Should this channel's connection
+     * be accepted and allow the channel to be read from? If you accept the channel, it is recommended to configure
+     * the channel to the appropriate settings during this function call.
+     * @throws IOException when a channel cannot be accept or read from.
+     * @return Return true if the engine registers the channel to the selector; false will close the channel
+     */
+    @Throws(IOException::class)
+    protected abstract fun onAccept(key: SelectionKey)
+
+    /**
+     * A channel is ready to be read by the engine's implementation.
+     * @throws IOException when a channel cannot be read from.
+     * @throws TimeoutException when a channel is taking too long to read from.
+     */
+    @Throws(IOException::class, TimeoutException::class)
+    protected abstract fun onRead(key: SelectionKey)
+
+    /**
+     * Reports an exception occurred while processing a channel.
+     */
+    protected abstract fun onException(ex: Exception)
+
     companion object {
-        private const val DEFAULT_THREAD_NAME = "server-socket-channel-thread"
+        private const val DEFAULT_THREAD_NAME = "server-socket-channel-engine"
         private const val DEFAULT_TIMEOUT_SECONDS = 60L
     }
 }
