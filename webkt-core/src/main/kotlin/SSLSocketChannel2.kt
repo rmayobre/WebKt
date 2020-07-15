@@ -1,326 +1,216 @@
 import java.io.IOException
+import java.net.SocketAddress
 import java.nio.ByteBuffer
-import java.nio.channels.ByteChannel
-import java.nio.channels.NetworkChannel
-import java.nio.channels.SocketChannel
-import javax.management.remote.JMXConnectionNotification.CLOSED
-import javax.net.ssl.*
+import java.nio.channels.*
+import javax.net.ssl.SSLEngine
+import javax.net.ssl.SSLEngineResult
 import javax.net.ssl.SSLEngineResult.HandshakeStatus
 import javax.net.ssl.SSLEngineResult.HandshakeStatus.*
 import javax.net.ssl.SSLEngineResult.Status.*
+import javax.net.ssl.SSLException
+import javax.net.ssl.SSLSession
 
+open class SSLSocketChannel2
 
-class SSLSocketChannel2(
+@Throws(SSLException::class)
+constructor(
     private val channel: SocketChannel,
     private val engine: SSLEngine
-) : ByteChannel, NetworkChannel by channel {
+) : ByteChannel by channel {
 
     /**
-     * This side's un-encrypted data.
+     * Application data received from THIS endpoint.
      */
-    private val data: ByteBuffer
+    protected var applicationData: ByteBuffer
 
     /**
-     * The decrypted data received from other endpoint.
+     * Application data received from OTHER endpoint.
      */
-    private var decryptedPeerData: ByteBuffer
+    protected var peerApplicationData: ByteBuffer
 
     /**
-     * Encrypted data from this side.
+     * Encrypted data received from THIS endpoint.
      */
-    private var encryptedData: ByteBuffer
+    protected var packetData: ByteBuffer
 
     /**
-     * The encrypted data received from other endpoint.
+     * Encrypted data received from OTHER endpoint.
      */
-    private var encryptedPeerData: ByteBuffer
+    protected var peerPacketData: ByteBuffer
 
     /**
      * Session created by SSLEngine.
      */
-    private val session: SSLSession
+    val session: SSLSession
         get() = engine.session
 
-    /** Default client-side constructor. */
-    constructor(host: String, port: Int) : this(SSLContext.getDefault(), host, port)
-
-    /** Client-side constructor. */
-    constructor(context: SSLContext, host: String, port: Int) : this(SocketChannel.open(), context.createSSLEngine(host, port)) {
-        engine.useClientMode = true
-    }
+    val remoteAddress: SocketAddress = channel.remoteAddress
 
     init {
         // Initialize buffers for decrypted data.
-        data = ByteBuffer.allocate(session.applicationBufferSize)
-        decryptedPeerData = ByteBuffer.allocate(session.applicationBufferSize)
+        applicationData = ByteBuffer.allocate(session.applicationBufferSize)
+        peerApplicationData = ByteBuffer.allocate(session.applicationBufferSize)
         // Initialize buffers for encrypted data. These will have direct
         // allocation because they will be used for IO operations.
-        encryptedData = ByteBuffer.allocateDirect(session.packetBufferSize)
-        encryptedPeerData = ByteBuffer.allocateDirect(session.packetBufferSize)
-        // Start handshake with connection.
-//        performHandshake()
-    }
-
-    @Synchronized
-    @Throws(IOException::class)
-    override fun write(buffer: ByteBuffer): Int {
-        var bytesWritten = 0
-
-        while (buffer.hasRemaining()) {
-            encryptedData.clear()
-            val result: SSLEngineResult = engine.wrap(buffer, encryptedData)
-            when (result.status) {
-                OK -> {
-                    encryptedData.flip()
-                    while (encryptedData.hasRemaining()) {
-                        bytesWritten += channel.write(encryptedData)
-                    }
-                }
-                BUFFER_UNDERFLOW -> throw SSLException("Buffer underflow occurred while writing.")
-                BUFFER_OVERFLOW -> throw SSLException("Buffer overflow occurred while writing.")
-//                CLOSED -> {
-//                    close()
-//                    return bytesWritten
-//                }
-                else -> throw IllegalStateException("SSLEngineResult status: ${result.status}, could not be determined while writing to channel.")
-            }
-        }
-
-        return bytesWritten
+        packetData = ByteBuffer.allocate(session.packetBufferSize)
+        peerPacketData = ByteBuffer.allocate(session.packetBufferSize)
     }
 
     @Synchronized
     @Throws(IOException::class)
     override fun read(buffer: ByteBuffer): Int {
-        if (!buffer.hasRemaining()) {
-            return 0
-        }
+        TODO("Read not finished")
+    }
 
-
-        val bytesRead: Int = channel.read(encryptedPeerData)
-
-        if (bytesRead > 0 || encryptedPeerData.hasRemaining()) {
-            while (encryptedPeerData.hasRemaining()) {
-                decryptedPeerData.compact()
-                val result: SSLEngineResult = engine.unwrap(encryptedPeerData, decryptedPeerData)
-
-                return when (result.status) {
-                    OK -> {
-                        decryptedPeerData.flip()
-                        decryptedPeerData.copyBytesTo(buffer)
-                    }
-                    BUFFER_UNDERFLOW -> throw SSLException("Buffer underflow occurred while reading.")
-                    BUFFER_OVERFLOW -> throw SSLException("Buffer overflow occurred while reading.")
-//                    CLOSED -> {
-//                        close()
-//                        buffer.clear()
-//                        -1
-//                    }
-                    else -> throw IllegalStateException("SSLEngineResult status: ${result.status}, could not be determined while reading channel.")
-                }
-            }
-        } else if (bytesRead < 0) {
-            engine.closeInbound()
-            close()
-        }
-
-        return decryptedPeerData.copyBytesTo(buffer)
+    @Synchronized
+    @Throws(IOException::class)
+    override fun write(buffer: ByteBuffer): Int {
+        TODO("Write not finished")
     }
 
     @Throws(IOException::class)
     override fun close() {
         engine.closeOutbound()
-//        performHandshake()
+        try {
+            performHandshake()
+        } catch (ex: Exception) {
+
+        }
         channel.close()
     }
 
+    @Throws(ClosedChannelException::class)
+    fun register(selector: Selector, operation: Int = SelectionKey.OP_READ): SelectionKey = // TODO not sure if needed.
+        channel.register(selector, operation, this)
+
+    @Synchronized
+    @Throws(IOException::class)
+    fun performHandshake() {
+        peerPacketData.clear()
+        peerApplicationData.clear()
+        applicationData.clear()
+        packetData.clear()
+
+        engine.beginHandshake()
+
+        try {
+            var status: HandshakeStatus? = engine.handshakeStatus
+            loop@ while (status != NOT_HANDSHAKING) {
+                status = when (status) {
+                    FINISHED -> onFinishedHandshake()
+                    NEED_WRAP -> onNeedWrap().handshakeStatus
+                    NEED_UNWRAP -> onNeedUnwrap().handshakeStatus
+                    NEED_TASK -> onNeedTask()
+                    else -> break@loop
+                }
+            }
+        } catch (ex: IOException) {
+            engine.closeOutbound()
+            throw ex
+        }
+    }
+
+    @Throws(IOException::class)
+    protected fun onFinishedHandshake(): HandshakeStatus {
+        if (peerPacketData.hasRemaining()) {
+            channel.write(peerPacketData)
+        }
+        return engine.handshakeStatus
+    }
+
     /**
-     * Implements the handshake protocol between two peers, required for the establishment of the SSL/TLS connection.
-     * During the handshake, encryption configuration information - such as the list of available cipher suites - will be exchanged
-     * and if the handshake is successful will lead to an established SSL/TLS session.
-     *
-     *
-     *
-     * A typical handshake will usually contain the following steps:
-     *
-     *
-     *  * 1. wrap:     ClientHello
-     *  * 2. unwrap:   ServerHello/Cert/ServerHelloDone
-     *  * 3. wrap:     ClientKeyExchange
-     *  * 4. wrap:     ChangeCipherSpec
-     *  * 5. wrap:     Finished
-     *  * 6. unwrap:   ChangeCipherSpec
-     *  * 7. unwrap:   Finished
-     *
-     *
-     *
-     * Handshake is also used during the end of the session, in order to properly close the connection between the two peers.
-     * A proper connection close will typically include the one peer sending a CLOSE message to another, and then wait for
-     * the other's CLOSE message to close the transport link. The other peer from his perspective would read a CLOSE message
-     * from his peer and then enter the handshake procedure to send his own CLOSE message as well.
-     *
-     * @param socketChannel - the socket channel that connects the two peers.
-     * @param engine - the engine that will be used for encryption/decryption of the data exchanged with the other peer.
-     * @return True if the connection handshake was successful or false if an error occurred.
-     * @throws IOException - if an error occurs during read/write to the socket channel.
+     * Event called when handshake requires data to be wrapped.
      */
-//    @Throws(IOException::class)
-//    protected fun doHandshake(socketChannel: SocketChannel, engine: SSLEngine): Boolean {
-//        log.debug("About to do handshake...")
-//        var result: SSLEngineResult
-//        var handshakeStatus: HandshakeStatus
-//
-//        // NioSslPeer's fields myAppData and peerAppData are supposed to be large enough to hold all message data the peer
-//        // will send and expects to receive from the other peer respectively. Since the messages to be exchanged will usually be less
-//        // than 16KB long the capacity of these fields should also be smaller. Here we initialize these two local buffers
-//        // to be used for the handshake, while keeping client's buffers at the same size.
-//        val appBufferSize = engine.session.applicationBufferSize
-//        val myAppData = ByteBuffer.allocate(appBufferSize)
-//        var peerAppData = ByteBuffer.allocate(appBufferSize)
-//        myNetData.clear()
-//        peerNetData.clear()
-//        handshakeStatus = engine.handshakeStatus
-//        while (handshakeStatus != FINISHED && handshakeStatus != NOT_HANDSHAKING) {
-//            when (handshakeStatus) {
-//                NEED_UNWRAP -> {
-//                    if (socketChannel.read(peerNetData) < 0) {
-//                        if (engine.isInboundDone && engine.isOutboundDone) {
-//                            return false
-//                        }
-//                        try {
-//                            engine.closeInbound()
-//                        } catch (e: SSLException) {
-//                            log.error("This engine was forced to close inbound, without having received the proper SSL/TLS close notification message from the peer, due to end of stream.")
-//                        }
-//                        engine.closeOutbound()
-//                        // After closeOutbound the engine will be set to WRAP state, in order to try to send a close message to the client.
-//                        handshakeStatus = engine.handshakeStatus
-//                        break
-//                    }
-//                    peerNetData.flip()
-//                    try {
-//                        result = engine.unwrap(peerNetData, peerAppData)
-//                        peerNetData.compact()
-//                        handshakeStatus = result.handshakeStatus
-//                    } catch (sslException: SSLException) {
-//                        log.error("A problem was encountered while processing the data that caused the SSLEngine to abort. Will try to properly close connection...")
-//                        engine.closeOutbound()
-//                        handshakeStatus = engine.handshakeStatus
-//                        break
-//                    }
-//                    when (result.status) {
-//                        OK -> {
-//                        }
-//                        BUFFER_OVERFLOW ->                     // Will occur when peerAppData's capacity is smaller than the data derived from peerNetData's unwrap.
-//                            peerAppData = enlargeApplicationBuffer(engine, peerAppData)
-//                        BUFFER_UNDERFLOW ->                     // Will occur either when no data was read from the peer or when the peerNetData buffer was too small to hold all peer's data.
-//                            peerNetData = handleBufferUnderflow(engine, peerNetData)
-//                        SSLEngineResult.Status.CLOSED -> return if (engine.isOutboundDone) {
-//                            false
-//                        } else {
-//                            engine.closeOutbound()
-//                            handshakeStatus = engine.handshakeStatus
-//                            break
-//                        }
-//                        else -> throw IllegalStateException("Invalid SSL status: " + result.status)
-//                    }
-//                }
-//                NEED_WRAP -> {
-//                    myNetData.clear()
-//                    try {
-//                        result = engine.wrap(myAppData, myNetData)
-//                        handshakeStatus = result.handshakeStatus
-//                    } catch (sslException: SSLException) {
-//                        log.error("A problem was encountered while processing the data that caused the SSLEngine to abort. Will try to properly close connection...")
-//                        engine.closeOutbound()
-//                        handshakeStatus = engine.handshakeStatus
-//                        break
-//                    }
-//                    when (result.status) {
-//                        OK -> {
-//                            myNetData.flip()
-//                            while (myNetData.hasRemaining()) {
-//                                socketChannel.write(myNetData)
-//                            }
-//                        }
-//                        BUFFER_OVERFLOW ->                     // Will occur if there is not enough space in myNetData buffer to write all the data that would be generated by the method wrap.
-//                            // Since myNetData is set to session's packet size we should not get to this point because SSLEngine is supposed
-//                            // to produce messages smaller or equal to that, but a general handling would be the following:
-//                            myNetData = enlargePacketBuffer(engine, myNetData)
-//                        BUFFER_UNDERFLOW -> throw SSLException("Buffer underflow occured after a wrap. I don't think we should ever get here.")
-//                        SSLEngineResult.Status.CLOSED -> try {
-//                            myNetData.flip()
-//                            while (myNetData.hasRemaining()) {
-//                                socketChannel.write(myNetData)
-//                            }
-//                            // At this point the handshake status will probably be NEED_UNWRAP so we make sure that peerNetData is clear to read.
-//                            peerNetData.clear()
-//                        } catch (e: Exception) {
-//                            println("Failed to send server's CLOSE message due to socket channel's failure.")
-//                            handshakeStatus = engine.handshakeStatus
-//                        }
-//                        else -> throw IllegalStateException("Invalid SSL status: " + result.status)
-//                    }
-//                }
-//                NEED_TASK -> {
-//                    var task: Runnable?
-//                    while (engine.delegatedTask.also { task = it } != null) {
-//                        executor.execute(task)
-//                    }
-//                    handshakeStatus = engine.handshakeStatus
-//                }
-//                FINISHED -> {
-//                }
-//                NOT_HANDSHAKING -> {
-//                }
-//                else -> throw IllegalStateException("Invalid SSL status: $handshakeStatus")
-//            }
-//        }
-//        return true
-//    }
-
     @Throws(IOException::class)
-    private fun wrap() {
-
+    protected fun onNeedWrap(): SSLEngineResult {
+        val result: SSLEngineResult = engine.wrap(applicationData, packetData)
+        when (result.status) {
+            OK -> {}
+            BUFFER_OVERFLOW -> {}
+            BUFFER_UNDERFLOW -> {}
+            CLOSED -> {}
+            else -> throw IllegalStateException("Invalid SSL status: " + result.status)
+        }
+        return result
     }
 
+    /**
+     * Event called when handshake requires data to be unwrapped.
+     */
     @Throws(IOException::class)
-    private fun unwrap() {
+    protected fun onNeedUnwrap(): SSLEngineResult {
+        if (channel.read(peerPacketData) < 0) {
+            TODO("Handle close channel - close engine")
+        }
 
+        peerPacketData.flip()
+        val result: SSLEngineResult = engine.unwrap(peerPacketData, peerApplicationData)
+        peerPacketData.compact()
+
+        when (result.status) {
+            OK -> {}
+            BUFFER_OVERFLOW -> peerApplicationData = peerApplicationData.enlargeApplicationBuffer()
+            BUFFER_UNDERFLOW -> peerPacketData = peerPacketData.handleBufferUnderflow()
+            CLOSED -> {}
+            else -> throw IllegalStateException("Invalid SSL status: " + result.status)
+        }
+        return result
     }
+
+    /**
+     * Event called when a delegated task from SSL handshake requires handling.
+     */
+    protected fun onNeedTask(): HandshakeStatus {
+        var task: Runnable?
+        while (engine.delegatedTask.also { task = it } != null) {
+            onHandleDelegatedTask(task!!)
+        }
+        return engine.handshakeStatus
+    }
+
+    /**
+     * How a delegated task from the SSL handshake should be handled.
+     */
+    protected open fun onHandleDelegatedTask(task: Runnable) {
+        task.run()
+    }
+
+    /**
+     * Enlarge a packet buffer. The packet buffer will be sent to the opposing endpoint.
+     * @return
+     */
+    protected fun ByteBuffer.enlargePacketBuffer(): ByteBuffer =
+        enlarge(engine.session.packetBufferSize)
+
+    /**
+     * Enlarging a packet buffer (peerApplicationData or myAppData)
+     *
+     * @param buffer the buffer to enlarge
+     * @return the enlarged buffer
+     */
+    protected fun ByteBuffer.enlargeApplicationBuffer(): ByteBuffer =
+        enlarge(engine.session.applicationBufferSize)
 
     companion object {
 
-        fun create(host: String, port: Int): SSLSocketChannel2? {
-            return try {
-                SSLSocketChannel2(host, port)
-            } catch (ex: Exception) {
-                null
-            }
-        }
-
-        fun create(context: SSLContext, host: String, port: Int): SSLSocketChannel2? {
-            return try {
-                SSLSocketChannel2(context, host, port)
-            } catch (ex: Exception) {
-                null
-            }
-        }
-
         /**
-         * Copy bytes from "this" ByteBuffer to the designated "buffer" ByteBuffer.
-         * @param buffer The designated buffer for all bytes to move to.
-         * @return number of bytes copied to the other buffer.
+         * Compares `sessionProposedCapacity` with buffer's capacity. If buffer's capacity is smaller,
+         * returns a buffer with the proposed capacity. If it's equal or larger, returns a buffer
+         * with capacity twice the size of the initial one.
+         *
+         * @param newCapacity - the minimum size of the new buffer, proposed by [SSLSession].
+         * @return A new buffer with a larger capacity.
          */
-        private fun ByteBuffer.copyBytesTo(buffer: ByteBuffer): Int = if (remaining() > buffer.remaining()) {
-            val diff: Int = remaining() - buffer.remaining()
-            limit(diff)
-            buffer.put(this)
-            diff
-        } else {
-            buffer.put(this)
-            remaining()
+        private fun ByteBuffer.enlarge(newCapacity: Int): ByteBuffer {
+            var buffer: ByteBuffer = this
+            buffer = if (newCapacity > buffer.capacity()) {
+                ByteBuffer.allocate(newCapacity)
+            } else {
+                ByteBuffer.allocate(buffer.capacity() * 2)
+            }
+            return buffer
         }
 
+//        fun createSocket(channel: SocketChannel, engine: SSLEngine,)
     }
 }

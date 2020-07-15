@@ -2,17 +2,22 @@ package example.ssl
 
 import SSLServerSocketChannelEngine
 import SSLSocketChannel
-import java.io.*
+import java.io.File
+import java.io.FileInputStream
+import java.io.InputStream
+import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
-import java.nio.channels.SocketChannel
 import java.nio.file.Paths
 import java.security.KeyStore
 import java.util.concurrent.LinkedBlockingDeque
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
-import javax.net.ssl.*
+import javax.net.ssl.KeyManagerFactory
+import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLSocket
+import javax.net.ssl.TrustManagerFactory
 
 
 private var KEYSTORE = Paths.get("", "keystore.jks").toString()
@@ -33,16 +38,22 @@ private class ExampleSSLServerEngine(context: SSLContext): SSLServerSocketChanne
     address = InetSocketAddress("localhost", 8080),
     service = threadPool
 ) {
-    override fun onAccept(channel: SocketChannel): Boolean {
-        println("New connection -> ${channel.remoteAddress}")
-        return true
+
+    override fun onAccept(channel: SSLSocketChannel) {
+        if (!channel.performHandshake()) {
+            println("Connection failed -> ${channel.remoteAddress}")
+            channel.close()
+        } else {
+            println("New connection -> ${channel.remoteAddress}")
+        }
     }
 
     override fun onRead(channel: SSLSocketChannel) {
-        val buffer = ByteBuffer.allocate(48)
-        val numOfBytesRead = channel.read(buffer)
+        val buffer = ByteBuffer.allocate(256)
+        var numOfBytesRead = channel.read(buffer)
+        numOfBytesRead = channel.read(buffer)
         println("Number of byte read: $numOfBytesRead")
-        println("Data read: ${buffer.int}")
+        println("Data read: $buffer")
     }
 
     override fun onException(ex: Exception) {
@@ -63,7 +74,7 @@ fun main() {
         val trustManagerFactory = TrustManagerFactory.getInstance("SunX509")
         trustManagerFactory.init(keyStore)
 
-        val context: SSLContext = SSLContext.getInstance( "TLS" )
+        val context: SSLContext = SSLContext.getInstance( "TLSv1.1" )
         context.init(
             keyManagerFactory.keyManagers,
             trustManagerFactory.trustManagers,
@@ -74,25 +85,36 @@ fun main() {
         server.start()
 
         val sslsocketfactory = context.socketFactory
-        val sslsocket = sslsocketfactory.createSocket("localhost", 8080) as SSLSocket
-        sslsocket.useClientMode = true
-        sslsocket.startHandshake()
-//        sslsocket.needClientAuth = true
-        sslsocket.addHandshakeCompletedListener {
-            println("HandshakeComplete!")
-            println(it.session)
+        val sslsocket = (sslsocketfactory.createSocket("localhost", 8080) as SSLSocket).apply {
+            useClientMode = true
+            enableSessionCreation = true
+            startHandshake()
+            addHandshakeCompletedListener {
+                println("HandshakeComplete!")
+                println(it.session)
+            }
         }
+
         val input: InputStream = sslsocket.inputStream
         val output: OutputStream = sslsocket.outputStream
 
         // Write a test byte to get a reaction :)
-        output.write("Hello".toByteArray())
-        while (input.available() > 0) {
-            println(input.read())
-        }
+//        output.write("Hello my name is ryan".toByteArray())
+//        while (input.available() > 0) {
+//            println(input.read())
+//        }
         println("Successfully connected")
         printSocketInfo(sslsocket)
-        output.write(123454254)
+//        output.write(123454254)
+
+        var theCharacter = 0
+        theCharacter = System.`in`.read()
+        while (theCharacter != '~'.toInt()) // The '~' is an escape character to exit
+        {
+            output.write(theCharacter)
+            output.flush()
+            theCharacter = System.`in`.read()
+        }
     } catch (exception: Exception) {
         exception.printStackTrace()
     }

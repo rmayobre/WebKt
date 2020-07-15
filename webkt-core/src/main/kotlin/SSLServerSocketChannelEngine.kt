@@ -1,12 +1,9 @@
 import java.io.IOException
 import java.net.InetSocketAddress
-import java.nio.channels.SelectionKey
-import java.nio.channels.ServerSocketChannel
 import java.nio.channels.SocketChannel
 import java.util.concurrent.ExecutorService
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLEngine
-
 
 abstract class SSLServerSocketChannelEngine(
     private val context: SSLContext,
@@ -16,54 +13,45 @@ abstract class SSLServerSocketChannelEngine(
 ) : ServerSocketChannelEngine(address, service, name) {
 
     @Throws(IOException::class)
-    override fun onAccept(key: SelectionKey) {
-        (key.channel() as ServerSocketChannel).accept()?.let { channel ->
-            channel.configureBlocking(false)
-            val engine: SSLEngine = context.createSSLEngine().apply {
-                useClientMode = false
-                beginHandshake()
-            }
+    override fun onAccept(channel: SocketChannel) {
+        channel.configureBlocking(false)
+        val engine: SSLEngine = context.createSSLEngine().apply {
+            useClientMode = false
+            needClientAuth = true
+        }
 
-            val sslChannel = SSLSocketChannel(channel, engine)
+        val sslChannel = SSLSocketChannel(channel, engine)
+//        printSocketInfo(channel)
 
-            // TODO If handshake is complete, register channel; otherwise close channel.
+        /*
+         * Start acceptance event call.
+         */
+        onAccept(sslChannel)
 
-            if (sslChannel.performHandshake()) {
-                register(channel, sslChannel)
-            } else {
-                sslChannel.close()
-            }
+        /*
+         * If channel is open after onAccept call,
+         * register channel for read operations.
+         */
+        if (sslChannel.isOpen) {
+            register(channel, sslChannel)
         }
     }
 
     @Throws(IOException::class)
-    override fun onRead(key: SelectionKey) {
-        val channel: SSLSocketChannel = key.attachment() as SSLSocketChannel
-        TODO("Read from SSLSocketChannel")
-    }
-/*
-    override fun onRead(channel: SocketChannel) {
-        val engine: SSLEngine = context.createSSLEngine().apply {
-            useClientMode = false
-//            needClientAuth = true
-            beginHandshake()
+    override fun onRead(channel: SocketChannel, attachment: Any?) {
+        val sslChannel: SSLSocketChannel = attachment as SSLSocketChannel
+        onRead(sslChannel)
+        /*
+         * If channel is open after onAccept call,
+         * register channel for read operations.
+         */
+        if (!sslChannel.isOpen) {
+            unregister(channel)
         }
-        val sslChannel = SSLSocketChannel(channel, engine)
-        try {
-            sslChannel.handshake()
-            onRead(sslChannel)
-        } catch (ex: IOException) {
-            sslChannel.close()
-        }
-        printSocketInfo(channel, engine)
-//        if (sslChannel.performHandshake()) {
-//            onRead(sslChannel)
-//        } else {
-//            sslChannel.close()
-//        }
     }
 
- */
+    @Throws(IOException::class)
+    protected abstract fun onAccept(channel: SSLSocketChannel)
 
     @Throws(IOException::class)
     protected abstract fun onRead(channel: SSLSocketChannel)

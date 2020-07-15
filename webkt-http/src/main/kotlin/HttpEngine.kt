@@ -6,6 +6,7 @@ import http.exception.ExceptionHandler
 import http.exception.HttpException
 import http.exception.HttpExceptionInterceptor
 import http.message.Message
+import http.message.Request
 import http.message.Response
 import http.message.channel.MessageChannel
 import http.message.channel.factory.MessageBufferChannelFactory
@@ -51,22 +52,30 @@ open class HttpEngine protected constructor(
         super.start()
     }
 
-    override fun onAccept(channel: SocketChannel): Boolean =
-            networkList.permits(channel.socket().inetAddress).also { isPermitted ->
-                if (isPermitted) {
-                    channel.socket().soTimeout = socketTimeout
-                }
-            }
+    @Throws(IOException::class)
+    override fun onAccept(channel: SocketChannel) {
+        if (networkList.permits(channel.socket().inetAddress)) {
+            channel.socket().soTimeout = socketTimeout
+        } else {
+            channel.close()
+        }
+    }
+//    override fun onAccept(channel: SocketChannel): Boolean =
+//            networkList.permits(channel.socket().inetAddress).also { isPermitted ->
+//                if (isPermitted) {
+//                    channel.socket().soTimeout = socketTimeout
+//                }
+//            }
 
     @Throws(
         IOException::class,
         TimeoutException::class,
         BadRequestException::class)
-    override fun onRead(channel: SocketChannel) {
+    override fun onRead(channel: SocketChannel, attachment: Any?) { //TODO figure out the registry
         val messageChannel: MessageChannel = factory.create(channel)
         try {
             val message: Message = messageChannel.read(readTimeout, TimeUnit.MILLISECONDS)
-            if (message is http.message.Request) {
+            if (message is Request) {
                 val session: HttpSession = sessionFactory.create(channel, message)
                 routes[message.path]?.onRoute(session).also {
                     messageChannel.write(session.response)
