@@ -14,35 +14,36 @@ abstract class ServerSocketChannelEngine(
     private val name: String = DEFAULT_THREAD_NAME
 ): ServerEngine, Runnable {
 
-    private lateinit var serverSocketChannel: ServerSocketChannel
+    private lateinit var serverChannel: ServerSocketChannel
 
     private lateinit var selector: Selector
 
     private lateinit var thread: Thread
 
-    private var running: Boolean = false
+    private var _isRunning: Boolean = false
 
     override val isRunning: Boolean
         get() = if (::thread.isInitialized) {
-            thread.isAlive && running
+            thread.isAlive && _isRunning
         } else {
             false
         }
 
     override fun start() {
-        running = true
+        _isRunning = true
         selector = Selector.open()
-        serverSocketChannel = ServerSocketChannel.open().apply {
-            bind(address)
-            configureBlocking(false)
-            register(selector, SelectionKey.OP_ACCEPT)
-        }
+        serverChannel = ServerSocketChannel.open()
         thread = Thread(this, name)
         thread.start()
     }
 
     override fun run() {
-        while (running) {
+        // After all variables have been created, configure server settings.
+        onCreate(serverChannel, selector)
+
+        // Process the selector and accept/read sockets while
+        // the thread is alive and stop hasn't been called.
+        while (_isRunning) {
             if (selector.selectNow() > 0) {
                 val selectedKeys: MutableSet<SelectionKey> = selector.selectedKeys()
                 val iterator: MutableIterator<SelectionKey> = selectedKeys.iterator()
@@ -75,7 +76,7 @@ abstract class ServerSocketChannelEngine(
      * @param timeUnit The unit of time the engine will use to measure the timeout length.
      */
     protected fun stop(timeout: Long, timeUnit: TimeUnit) {
-        running = false
+        _isRunning = false
         try {
             service.shutdown()
             service.awaitTermination(timeout, timeUnit)
@@ -83,7 +84,7 @@ abstract class ServerSocketChannelEngine(
             service.shutdownNow()
         }
         selector.close()
-        serverSocketChannel.close()
+        serverChannel.close()
     }
 
 
@@ -115,9 +116,25 @@ abstract class ServerSocketChannelEngine(
         }
     }
 
+    /**
+     * Called after the engine has created it's thread, channel, and selector. At this point,
+     * it is recommended to configure your channel and register the selector. This step is
+     * optional and not required to function. Only override if you need specific configurations.
+     * @param channel the engine's ServerSocketChannel.
+     * @param selector the Selector created for the ServerSocketChannel.
+     */
+    @Throws(IOException::class)
+    protected open fun onCreate(channel: ServerSocketChannel, selector: Selector) {
+        with(channel) {
+            bind(address)
+            configureBlocking(false)
+            register(selector, SelectionKey.OP_ACCEPT)
+        }
+    }
+
     @Throws(IOException::class)
     protected open fun onAccept(key: SelectionKey) {
-        serverSocketChannel.accept()?.let { channel: SocketChannel ->
+        serverChannel.accept()?.let { channel: SocketChannel ->
             service.execute {
                 try {
                     onAccept(channel.apply {

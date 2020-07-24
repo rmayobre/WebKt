@@ -2,11 +2,10 @@ package example.ssl
 
 import SSLServerSocketChannelEngine
 import SSLSocketChannel
-import java.io.File
-import java.io.FileInputStream
-import java.io.InputStream
-import java.io.OutputStream
+import sun.security.ssl.SSLServerSocketFactoryImpl
+import java.io.*
 import java.net.InetSocketAddress
+import java.net.ServerSocket
 import java.nio.ByteBuffer
 import java.nio.file.Paths
 import java.security.KeyStore
@@ -14,10 +13,7 @@ import java.util.concurrent.LinkedBlockingDeque
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
-import javax.net.ssl.KeyManagerFactory
-import javax.net.ssl.SSLContext
-import javax.net.ssl.SSLSocket
-import javax.net.ssl.TrustManagerFactory
+import javax.net.ssl.*
 
 
 private var KEYSTORE = Paths.get("", "keystore.jks").toString()
@@ -62,6 +58,30 @@ private class ExampleSSLServerEngine(context: SSLContext): SSLServerSocketChanne
 
 }
 
+private class SocketServerTest(context: SSLContext): Runnable {
+    private val serverSocket: SSLServerSocket = context.serverSocketFactory.createServerSocket(8080) as SSLServerSocket
+
+    override fun run() {
+        while(true) {
+            serverSocket.accept()?.let { socket ->
+                val input = socket.getInputStream()
+                val bufferedReader = BufferedReader(InputStreamReader(input))
+                var line: String? = bufferedReader.readLine()
+                while (line != null) {
+                    if (line == "hello") {
+                        println("Goodbye")
+                        socket.close()
+                    } else {
+                        println(line)
+
+                        line = bufferedReader.readLine()
+                    }
+                }
+            }
+        }
+    }
+}
+
 fun main() {
     try {
         val keyStoreFile = File(KEYSTORE)
@@ -80,9 +100,14 @@ fun main() {
             trustManagerFactory.trustManagers,
             null )
 
-        /* Start server */
-        val server = ExampleSSLServerEngine(context)
-        server.start()
+//        /* Start server */
+//        val server = ExampleSSLServerEngine(context)
+//        server.start()
+
+        val server = SocketServerTest(context)
+        val thread = Thread(server, "thread-server")
+        thread.start()
+
 
         val sslsocketfactory = context.socketFactory
         val sslsocket = (sslsocketfactory.createSocket("localhost", 8080) as SSLSocket).apply {

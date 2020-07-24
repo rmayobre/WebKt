@@ -2,6 +2,7 @@ import java.io.IOException
 import java.net.SocketAddress
 import java.nio.ByteBuffer
 import java.nio.channels.*
+import java.util.concurrent.Executor
 import javax.net.ssl.SSLEngine
 import javax.net.ssl.SSLEngineResult
 import javax.net.ssl.SSLEngineResult.HandshakeStatus
@@ -15,7 +16,8 @@ open class SSLSocketChannel2
 @Throws(SSLException::class)
 constructor(
     private val channel: SocketChannel,
-    private val engine: SSLEngine
+    private val engine: SSLEngine,
+    private val executor: Executor? = null
 ) : ByteChannel by channel {
 
     /**
@@ -150,7 +152,7 @@ constructor(
         when (result.status) {
             OK -> {}
             BUFFER_OVERFLOW -> peerApplicationData = peerApplicationData.enlargeApplicationBuffer()
-            BUFFER_UNDERFLOW -> peerPacketData = peerPacketData.handleBufferUnderflow()
+//            BUFFER_UNDERFLOW -> peerPacketData = peerPacketData.handleBufferUnderflow()
             CLOSED -> {}
             else -> throw IllegalStateException("Invalid SSL status: " + result.status)
         }
@@ -172,7 +174,7 @@ constructor(
      * How a delegated task from the SSL handshake should be handled.
      */
     protected open fun onHandleDelegatedTask(task: Runnable) {
-        task.run()
+        executor?.execute(task) ?: task.run()
     }
 
     /**
