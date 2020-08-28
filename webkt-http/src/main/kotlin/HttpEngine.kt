@@ -53,7 +53,7 @@ open class HttpEngine protected constructor(
     }
 
     @Throws(IOException::class)
-    override fun onAccept(channel: SocketChannel) {
+    override fun onChannelAccepted(channel: SocketChannel) {
         if (networkList.permits(channel.socket().inetAddress)) {
             channel.socket().soTimeout = socketTimeout
         } else {
@@ -71,7 +71,7 @@ open class HttpEngine protected constructor(
         IOException::class,
         TimeoutException::class,
         BadRequestException::class)
-    override fun onRead(channel: SocketChannel, attachment: Any?) { //TODO figure out the registry
+    override fun onReadChannel(channel: SocketChannel, attachment: Any?) { //TODO figure out the registry
         val messageChannel: MessageChannel = factory.create(channel)
         try {
             val message: Message = messageChannel.read(readTimeout, TimeUnit.MILLISECONDS)

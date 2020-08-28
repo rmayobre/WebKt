@@ -13,7 +13,7 @@ abstract class SSLServerSocketChannelEngine(
 ) : ServerSocketChannelEngine(address, service, name) {
 
     @Throws(IOException::class)
-    override fun onAccept(channel: SocketChannel) {
+    override fun onChannelAccepted(channel: SocketChannel) {
         channel.configureBlocking(false)
         val engine: SSLEngine = context.createSSLEngine().apply {
             useClientMode = false
@@ -26,35 +26,39 @@ abstract class SSLServerSocketChannelEngine(
         /*
          * Start acceptance event call.
          */
-        onAccept(sslChannel)
+        onAcceptSSLChannel(sslChannel)
 
-        /*
-         * If channel is open after onAccept call,
-         * register channel for read operations.
-         */
-        if (sslChannel.isOpen) {
-            register(channel, sslChannel)
-        }
+//        /*
+//         * If channel is open after onAcceptSSLChannel call,
+//         * register channel for read operations.
+//         */
+//        if (sslChannel.isOpen) {
+//            registerToRead(channel, sslChannel)
+//        }
     }
 
     @Throws(IOException::class)
-    override fun onRead(channel: SocketChannel, attachment: Any?) {
+    override fun onReadChannel(channel: SocketChannel, attachment: Any?) {
         val sslChannel: SSLSocketChannel = attachment as SSLSocketChannel
-        onRead(sslChannel)
-        /*
-         * If channel is open after onAccept call,
-         * register channel for read operations.
-         */
-        if (!sslChannel.isOpen) {
-            unregister(channel)
-        }
+        onReadSSLChannel(sslChannel)
+//        /*
+//         * If channel is open after onAccept call,
+//         * register channel for read operations.
+//         */
+//        if (!sslChannel.isOpen) {
+//            unregister(channel)
+//        }
+    }
+
+    override fun onWriteChannel(channel: SocketChannel, attachment: Any?) {
+        TODO("Not yet implemented")
     }
 
     @Throws(IOException::class)
-    protected abstract fun onAccept(channel: SSLSocketChannel)
+    protected abstract fun onAcceptSSLChannel(channel: SSLSocketChannel)
 
     @Throws(IOException::class)
-    protected abstract fun onRead(channel: SSLSocketChannel)
+    protected abstract fun onReadSSLChannel(channel: SSLSocketChannel)
 
     companion object {
         private const val DEFAULT_THREAD_NAME = "ssl-server-socket-channel-engine"

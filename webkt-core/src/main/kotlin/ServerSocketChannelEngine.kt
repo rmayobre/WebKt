@@ -1,9 +1,6 @@
 import java.io.IOException
 import java.net.InetSocketAddress
-import java.nio.channels.SelectionKey
-import java.nio.channels.Selector
-import java.nio.channels.ServerSocketChannel
-import java.nio.channels.SocketChannel
+import java.nio.channels.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
@@ -39,7 +36,7 @@ abstract class ServerSocketChannelEngine(
 
     override fun run() {
         // After all variables have been created, configure server settings.
-        onCreate(serverChannel, selector)
+        onConfigure(serverChannel, selector)
 
         // Process the selector and accept/read sockets while
         // the thread is alive and stop hasn't been called.
@@ -53,12 +50,18 @@ abstract class ServerSocketChannelEngine(
                     try {
                         if (key.isValid) {
                             when {
+                                // ServerSocketChannel has an incoming connection request.
                                 key.isAcceptable -> onAccept(key)
+
+                                // A channel, registered to the selector, has incoming data.
                                 key.isReadable -> onRead(key)
+
+                                // A channel, registered to the selector, has data to be written.
+                                key.isWritable -> onWrite(key)
                             }
                         }
                     } catch (ex: Exception) {
-                        onException(ex)
+                        onException(ex, key)
                     }
                 }
             }
@@ -71,11 +74,12 @@ abstract class ServerSocketChannelEngine(
     )
 
     /**
-     * Stop the ServerSocketChannel and all running tasks.
+     * Stop the ServerSocketChannel and all running tasks. Function can be overridden, however, you must call the super
+     * function in order to actually stop the engine from processing threads.
      * @param timeout How long the engine will wait for pending processes to finish before a forced shutdown.
      * @param timeUnit The unit of time the engine will use to measure the timeout length.
      */
-    protected fun stop(timeout: Long, timeUnit: TimeUnit) {
+    protected open fun stop(timeout: Long, timeUnit: TimeUnit) {
         _isRunning = false
         try {
             service.shutdown()
@@ -92,16 +96,36 @@ abstract class ServerSocketChannelEngine(
      * Register channel back into selector. Only registers channel if channel is open.
      * @throws IOException if channel cannot be registered to selector.
      */
+    @Deprecated("remove")
     @Throws(IOException::class)
-    protected fun register(channel: SocketChannel, operation: Int = SelectionKey.OP_READ) =
+    protected fun register(channel: SelectableChannel, operation: Int = SelectionKey.OP_READ) =
         register(channel, null, operation)
+
+
+
+    /**
+     * Register channel back into selector as a read operation. Only registers channel if channel is open.
+     * @throws IOException if channel cannot be registered to selector.
+     */
+    @Throws(IOException::class)
+    protected fun registerToWrite(channel: SelectableChannel, attachment: Any? = null) =
+            register(channel, attachment, SelectionKey.OP_WRITE)
+
+
+    /**
+     * Register channel back into selector as a read operation. Only registers channel if channel is open.
+     * @throws IOException if channel cannot be registered to selector.
+     */
+    @Throws(IOException::class)
+    protected fun registerToRead(channel: SelectableChannel, attachment: Any? = null) =
+            register(channel, attachment, SelectionKey.OP_READ)
 
     /**
      * Register channel back into selector. Only registers channel if channel is open.
      * @throws IOException if channel cannot be registered to selector.
      */
     @Throws(IOException::class)
-    protected fun register(channel: SocketChannel, attachment: Any?, operation: Int = SelectionKey.OP_READ) {
+    private fun register(channel: SelectableChannel, attachment: Any?, operation: Int) {
         if (channel.isOpen) {
             channel.register(selector, operation, attachment)
         }
@@ -110,6 +134,7 @@ abstract class ServerSocketChannelEngine(
     /**
      * Unregister channel from selector.
      */
+    @Deprecated("dont unregister.")
     protected fun unregister(channel: SocketChannel) {
         channel.keyFor(selector).let { key: SelectionKey ->
             key.cancel()
@@ -124,7 +149,7 @@ abstract class ServerSocketChannelEngine(
      * @param selector the Selector created for the ServerSocketChannel.
      */
     @Throws(IOException::class)
-    protected open fun onCreate(channel: ServerSocketChannel, selector: Selector) {
+    protected open fun onConfigure(channel: ServerSocketChannel, selector: Selector) {
         with(channel) {
             bind(address)
             configureBlocking(false)
@@ -132,31 +157,54 @@ abstract class ServerSocketChannelEngine(
         }
     }
 
+    /**
+     *
+     */
     @Throws(IOException::class)
     protected open fun onAccept(key: SelectionKey) {
         serverChannel.accept()?.let { channel: SocketChannel ->
             service.execute {
                 try {
-                    onAccept(channel.apply {
-                        configureBlocking(false)
-                    })
+                    channel.configureBlocking(false)
+                    onChannelAccepted(channel)
                 } catch (ex: Exception) {
-                    onException(ex)
+                    onException(ex, key)
                 }
             }
         }
     }
 
+    /**
+     *
+     */
     @Throws(IOException::class)
     protected open fun onRead(key: SelectionKey) {
         service.execute {
             try {
-                onRead(
+                onReadChannel(
                     channel = key.channel() as SocketChannel,
                     attachment = key.attachment()
                 )
             } catch (ex: Exception) {
-                onException(ex)
+                onException(ex, key)
+            }
+        }
+        key.cancel()
+    }
+
+    /**
+     *
+     */
+    @Throws(IOException::class)
+    protected open fun onWrite(key: SelectionKey) {
+        service.execute {
+            try {
+                onWriteChannel(
+                        channel = key.channel() as SocketChannel,
+                        attachment = key.attachment()
+                )
+            } catch (ex: Exception) {
+                onException(ex, key)
             }
         }
         key.cancel()
@@ -170,20 +218,30 @@ abstract class ServerSocketChannelEngine(
      * @return Return true if the engine registers the channel to the selector; false will close the channel
      */
     @Throws(IOException::class)
-    protected abstract fun onAccept(channel: SocketChannel)
+    protected abstract fun onChannelAccepted(channel: SocketChannel)
 
     /**
-     * A channel is ready to be read by the engine's implementation.
+     * A channel is ready to be read by the engine's child implementation.
      * @throws IOException when a channel cannot be read from.
      * @throws TimeoutException when a channel is taking too long to read from.
      */
     @Throws(IOException::class, TimeoutException::class)
-    protected abstract fun onRead(channel: SocketChannel, attachment: Any?)
+    protected abstract fun onReadChannel(channel: SocketChannel, attachment: Any?)
+
+    /**
+     * A channel is ready to be written by the engine's child implementation.
+     * @throws IOException when a channel cannot be read from.
+     * @throws TimeoutException when a channel is taking too long to read from.
+     */
+    @Throws(IOException::class, TimeoutException::class)
+    protected abstract fun onWriteChannel(channel: SocketChannel, attachment: Any?)
 
     /**
      * Reports an exception occurred while processing a channel.
+     * @param ex Exception that was thrown.
+     * @param key Key being used while exception was thrown.
      */
-    protected abstract fun onException(ex: Exception)
+    protected abstract fun onException(ex: Exception, key: SelectionKey)
 
     companion object {
         private const val DEFAULT_THREAD_NAME = "server-socket-channel-engine"

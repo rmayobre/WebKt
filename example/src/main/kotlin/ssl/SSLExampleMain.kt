@@ -7,6 +7,8 @@ import java.io.*
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.nio.ByteBuffer
+import java.nio.channels.SelectionKey
+import java.nio.channels.SocketChannel
 import java.nio.file.Paths
 import java.security.KeyStore
 import java.util.concurrent.LinkedBlockingDeque
@@ -35,7 +37,7 @@ private class ExampleSSLServerEngine(context: SSLContext): SSLServerSocketChanne
     service = threadPool
 ) {
 
-    override fun onAccept(channel: SSLSocketChannel) {
+    override fun onAcceptSSLChannel(channel: SSLSocketChannel) {
         if (!channel.performHandshake()) {
             println("Connection failed -> ${channel.remoteAddress}")
             channel.close()
@@ -44,7 +46,7 @@ private class ExampleSSLServerEngine(context: SSLContext): SSLServerSocketChanne
         }
     }
 
-    override fun onRead(channel: SSLSocketChannel) {
+    override fun onReadSSLChannel(channel: SSLSocketChannel) {
         val buffer = ByteBuffer.allocate(256)
         var numOfBytesRead = channel.read(buffer)
         numOfBytesRead = channel.read(buffer)
@@ -52,7 +54,7 @@ private class ExampleSSLServerEngine(context: SSLContext): SSLServerSocketChanne
         println("Data read: $buffer")
     }
 
-    override fun onException(ex: Exception) {
+    override fun onException(ex: Exception, key: SelectionKey) {
         println(ex)
     }
 
@@ -100,13 +102,13 @@ fun main() {
             trustManagerFactory.trustManagers,
             null )
 
-//        /* Start server */
-//        val server = ExampleSSLServerEngine(context)
-//        server.start()
+        /* Start server */
+        val server = ExampleSSLServerEngine(context)
+        server.start()
 
-        val server = SocketServerTest(context)
-        val thread = Thread(server, "thread-server")
-        thread.start()
+//        val server = SocketServerTest(context)
+//        val thread = Thread(server, "thread-server")
+//        thread.start()
 
 
         val sslsocketfactory = context.socketFactory
