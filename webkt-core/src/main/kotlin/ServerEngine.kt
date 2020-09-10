@@ -2,12 +2,12 @@ import java.io.IOException
 import java.net.InetSocketAddress
 
 /**
- *
+ * An engine that hosts network operations.
  */
 interface ServerEngine {
 
     /**
-     * Determine if Engine is running
+     * Is the ServerEngine running? Returns true if so.
      */
     val isRunning: Boolean
 
@@ -20,6 +20,7 @@ interface ServerEngine {
 
     /**
      * Stop the engine.
+     * @throws IOException thrown if engine had trouble shutting down it's IO operations or closing it's IO objects.
      */
     @Throws(IOException::class)
     fun stop()

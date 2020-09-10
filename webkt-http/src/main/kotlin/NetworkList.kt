@@ -13,7 +13,7 @@ sealed class NetworkList(addresses: Set<InetAddress>): Set<InetAddress> by addre
 /**
  * Only these addresses will be allowed access to the server.
  */
-class Whitelist private constructor(
+class AllowList private constructor(
     private val addresses: MutableSet<InetAddress>
 ) : NetworkList(addresses), MutableCollection<InetAddress> by addresses {
 
@@ -46,7 +46,7 @@ class Whitelist private constructor(
 /**
  * These addresses are not allowed access to server.
  */
-class Blacklist private constructor(
+class BlockList private constructor(
     private val addresses: MutableSet<InetAddress>
 ) : NetworkList(addresses), MutableCollection<InetAddress> by addresses {
 

@@ -43,18 +43,36 @@ abstract class SSLServerSocketChannelEngine(
     protected fun registerToWrite(channel: SSLSocketChannel, data: Any? = null) =
             registerToWrite(channel.channel, SSLWriteBundle(channel, data))
 
+    /**
+     * A new SSLSocketChannel was created and is ready to perform an SSL handshake.
+     * @throws IOException thrown from IO operations with SSLSocketChannel; can occur while performing handshake.
+     */
     @Throws(IOException::class)
     protected abstract fun onSSLHandshake(channel: SSLSocketChannel)
 
-
+    /**
+     * A channel is ready to be read from.
+     * @throws IOException thrown from IO operations with SSLSocketChannel
+     */
     @Throws(IOException::class)
     protected abstract fun onReadSSLChannel(channel: SSLSocketChannel)
 
+    /**
+     * A channel is ready to be written to.
+     * @throws IOException thrown from IO operations with SSLSocketChannel
+     */
     @Throws(IOException::class)
     protected abstract fun onWriteSSLChannel(channel: SSLSocketChannel, data: Any?)
 
+    /**
+     * A bundle created during a [registerToWrite] call. It is passed to the Selector as an
+     * attachment and carries the SSLSocketChannel, as well as the data to be written in the
+     * [onWriteSSLChannel] event.
+     */
     protected class SSLWriteBundle(
+        /** Channel to write to. */
         val channel: SSLSocketChannel,
+        /** Data to be written. */
         val data: Any?
     )
 

@@ -31,11 +31,6 @@ abstract class SelectorEngine(
     }
 
     override fun run() {
-        // After all variables have been created, configure server settings.
-//        onConfigure(channel, selector)
-
-        // Process the selector and accept/read sockets while
-        // the thread is alive and stop hasn't been called.
         while (_isRunning) {
             if (selector.selectNow() > 0) {
                 selector.selectedKeys().forEach { key ->
@@ -112,21 +107,45 @@ abstract class SelectorEngine(
         }
     }
 
+    /**
+     * A lifecycle event of the SelectorEngine. This means the Selector has provided a SelectionKey that is able to
+     * accept an incoming connection.
+     * @param key The SelectionKey providing the SelectableChannel with a new incoming connection.
+     * @throws IOException Usually thrown when the SelectableChannel cannot accept the new connection.
+     */
     @Throws(IOException::class)
     protected open fun onAccept(key: SelectionKey) {
         key.cancel()
     }
 
+    /**
+     * A lifecycle event of the SelectorEngine. This means the Selector has provided a SelectionKey that has
+     * a channel, ready to finish connection.
+     * @param key The SelectionKey providing the SelectableChannel with a new incoming connection.
+     * @throws IOException Usually thrown when the SelectableChannel cannot accept the new connection.
+     */
     @Throws(IOException::class)
     protected open fun onConnect(key: SelectionKey) {
         key.cancel()
     }
 
+    /**
+     * A lifecycle event of the SelectorEngine. This means the Selector has provided a SelectionKey with a channel
+     * that has incoming data being sent from the opposing endpoint.
+     * @param key The SelectionKey providing the SelectableChannel with a new incoming connection.
+     * @throws IOException Usually thrown when the SelectableChannel cannot accept the new connection.
+     */
     @Throws(IOException::class)
     protected open fun onRead(key: SelectionKey) {
         key.cancel()
     }
 
+    /**
+     * A lifecycle event of the SelectorEngine. This means the Selector has provided a SelectionKey that is ready
+     * for it's channel to write data.
+     * @param key The SelectionKey providing the SelectableChannel with a new incoming connection.
+     * @throws IOException Usually thrown when the SelectableChannel cannot accept the new connection.
+     */
     @Throws(IOException::class)
     protected open fun onWrite(key: SelectionKey) {
         key.cancel()

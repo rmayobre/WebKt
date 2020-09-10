@@ -1,6 +1,7 @@
 package channel.ssl
 
 import java.io.IOException
+import java.net.InetAddress
 import java.net.SocketAddress
 import java.nio.ByteBuffer
 import java.nio.channels.*
@@ -12,23 +13,10 @@ import javax.net.ssl.SSLEngineResult.Status.*
 import kotlin.math.min
 
 /**
- *                   app data
- *
- *                |           ^
- *                |     |     |
- *                v     |     |
- *           +----+-----|-----+----+
- *           |          |          |
- *           |       SSL|Engine    |
- *   wrap()  |          |          |  unwrap()
- *           | OUTBOUND | INBOUND  |
- *           |          |          |
- *           +----+-----|-----+----+
- *                |     |     ^
- *                |     |     |
- *                v           |
- *
- *                   net data
+ * A Secure Socket Layer implementation of a ByteChannel. This channel is not selectable. Registering this
+ * channel to a Selector will not work, however, it can be an attachment. This feature may become available
+ * in future iterations. Essentially, this channel is a Wrapper for a SocketChannel and a SSEngine with the
+ * added function [performHandshake].
  */
 class SSLSocketChannel
 
@@ -64,14 +52,29 @@ constructor(
      */
     private var peerPacketData: ByteBuffer
 
-    /**
-     * Session created by SSLEngine.
-     */
-    private val session: SSLSession
+    /** Channel's SSLSession created from SSLEngine. */
+    val session: SSLSession
         get() = engine.session
 
+    /** Get the socket's InetAddress */
+    val inetAddress: InetAddress
+        get() = channel.socket().inetAddress
+
+    /** Get the channel's remote address. */
     val remoteAddress: SocketAddress
         get() = channel.remoteAddress
+
+    /** Get the channel's remote port. */
+    val remotePort: Int
+        get() = channel.socket().port
+
+    /** Get the channel's local address. */
+    val localAddress: SocketAddress
+        get() = channel.localAddress
+
+    /** Get the channel's local port. */
+    val localPort: Int
+        get() = channel.socket().localPort
 
     init {
         engine.beginHandshake()
@@ -248,9 +251,6 @@ constructor(
         }
     }
 
-    /**
-     * Function to handle unwrap process.
-     */
     @Throws(IOException::class)
     private fun unwrap() {
         if (readToPeerPacketData() < 0) {
@@ -328,7 +328,7 @@ constructor(
             "Remote Address:    ${socket.remoteSocketAddress}\n" +
             "Remote Port:       ${socket.port}\n" +
             "Local Address:     ${socket.localAddress}\n" +
-            "Local Port:        ${socket.port}\n" +
+            "Local Port:        ${socket.localPort}\n" +
             "Need Client Auth:  ${engine.needClientAuth}\n" +
             "Cipher Suit:       ${session.cipherSuite}\n" +
             "Protocol:          ${session.protocol}\n" +
@@ -385,3 +385,22 @@ constructor(
             }
     }
 }
+/*
+ *                   app data
+ *
+ *                |           ^
+ *                |     |     |
+ *                v     |     |
+ *           +----+-----|-----+----+
+ *           |          |          |
+ *           |       SSL|Engine    |
+ *   wrap()  |          |          |  unwrap()
+ *           | OUTBOUND | INBOUND  |
+ *           |          |          |
+ *           +----+-----|-----+----+
+ *                |     |     ^
+ *                |     |     |
+ *                v           |
+ *
+ *                   net data
+ */
