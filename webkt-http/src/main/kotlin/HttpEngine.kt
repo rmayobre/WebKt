@@ -1,6 +1,6 @@
 package http
 
-import ServerSocketChannelEngine
+import channel.ServerSocketChannelEngine
 import http.exception.BadRequestException
 import http.exception.ExceptionHandler
 import http.exception.HttpException
@@ -18,6 +18,7 @@ import http.session.factory.HttpSessionFactory
 import http.session.factory.SocketChannelHttpSessionFactory
 import java.io.IOException
 import java.net.InetSocketAddress
+import java.nio.channels.SelectionKey
 import java.nio.channels.SocketChannel
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
@@ -25,7 +26,7 @@ import java.util.concurrent.TimeoutException
 import kotlin.reflect.KClass
 
 /**
- * HTTP protocol layer of the ServerSocketChannelEngine inheritance.
+ * HTTP protocol layer of the channel.ServerSocketChannelEngine inheritance.
  */
 open class HttpEngine protected constructor(
     private val factory: MessageChannelFactory,
@@ -82,7 +83,7 @@ open class HttpEngine protected constructor(
                     if (!session.keepAlive) {
                         session.close()
                     } else if (session.isUpgrade) {
-                        unregister(channel)
+//                        unregister(channel)
                     }
                 } ?: throw BadRequestException("Path (path = \"${message.path}\") does not exist.")
             } else {
@@ -94,7 +95,11 @@ open class HttpEngine protected constructor(
         }
     }
 
-    override fun onException(ex: Exception) {
+    override fun onWriteChannel(channel: SocketChannel, attachment: Any?) {
+        TODO("Not yet implemented")
+    }
+
+    override fun onException(ex: Exception, key: SelectionKey) {
         exceptionHandlers.forEach {
             it.onException(ex)
         }

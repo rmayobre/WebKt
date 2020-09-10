@@ -1,5 +1,6 @@
-package example
+package example.http
 
+import http.ExampleWebsocketRoute
 import http.route.Route
 import java.io.BufferedReader
 import java.io.InputStreamReader

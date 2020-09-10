@@ -1,4 +1,4 @@
-package example
+package example.http
 
 import http.HttpEngine
 import http.route.Route

@@ -1,3 +1,6 @@
+package channel
+
+import ServerEngine
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.nio.channels.*
@@ -41,12 +44,14 @@ abstract class ServerSocketChannelEngine(
         // Process the selector and accept/read sockets while
         // the thread is alive and stop hasn't been called.
         while (_isRunning) {
+//            println("Number of channels that changed: ${selector.select()}")
             if (selector.selectNow() > 0) {
-                val selectedKeys: MutableSet<SelectionKey> = selector.selectedKeys()
-                val iterator: MutableIterator<SelectionKey> = selectedKeys.iterator()
-                while(iterator.hasNext()) {
-                    val key: SelectionKey = iterator.next()
-                    iterator.remove()
+//                val selectedKeys: MutableSet<SelectionKey> = selector.selectedKeys()
+//                val iterator: MutableIterator<SelectionKey> = selectedKeys.iterator()
+//                while(iterator.hasNext()) {
+//                    val key: SelectionKey = iterator.next()
+//                    iterator.remove()
+                selector.selectedKeys().forEach { key ->
                     try {
                         if (key.isValid) {
                             when {

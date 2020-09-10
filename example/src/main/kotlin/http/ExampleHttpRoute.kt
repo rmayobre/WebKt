@@ -1,4 +1,4 @@
-package example
+package example.http
 
 import http.content.TextType
 import http.route.RestfulRoute

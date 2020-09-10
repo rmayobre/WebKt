@@ -1,4 +1,4 @@
-package example
+package http
 
 import http.message.Request
 import websocket.ClosureCode
