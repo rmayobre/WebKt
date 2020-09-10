@@ -6,9 +6,6 @@ import java.net.InetSocketAddress
  */
 interface ServerEngine {
 
-    /** Network address the server engine binds to. */
-    val address: InetSocketAddress
-
     /**
      * Determine if Engine is running
      */

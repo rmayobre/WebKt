@@ -1,10 +1,11 @@
-package channel.ssl
+package ssl
 
+import channel.ssl.SSLServerSocketChannelEngine
+import channel.ssl.SSLSocketChannel
 import java.io.*
-import java.lang.StringBuilder
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
-import java.nio.channels.SelectionKey
+import java.nio.channels.SocketChannel
 import java.nio.file.Paths
 import java.security.KeyStore
 import java.util.concurrent.LinkedBlockingDeque
@@ -69,8 +70,8 @@ private class ExampleSSLServerEngine(context: SSLContext): SSLServerSocketChanne
         registerToRead(channel)
     }
 
-    override fun onException(ex: Exception, key: SelectionKey) {
-        println("Exception on key: $key -> $ex")
+    override fun onException(ex: Exception, channel: SocketChannel) {
+        println("Exception on channel: $channel -> $ex")
         ex.printStackTrace()
     }
 
@@ -78,7 +79,7 @@ private class ExampleSSLServerEngine(context: SSLContext): SSLServerSocketChanne
 
 /**
  * Main function for the SSL example. Generate a Keystore JKS file with
- * the following line (place at the root of project in order to run main):
+ * the following line (place at the root of project in order to run ssl.main):
  *
  * keytool -genkey -keyalg RSA -validity 3650 -keystore "keystore.jks" -storepass "storepassword" -keypass "keypassword" -alias "default" -dname "CN=127.0.0.1, OU=MyOrgUnit, O=MyOrg, L=MyCity, S=MyRegion, C=MyCountry"
  */

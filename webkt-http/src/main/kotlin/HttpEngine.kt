@@ -90,7 +90,7 @@ open class HttpEngine protected constructor(
                 throw BadRequestException("Expecting a Request to be sent.")
             }
         } catch (ex: HttpException) {
-            messageChannel.write(httpExceptionHandlers.getResponse(ex, ex::class))
+//            messageChannel.write(httpExceptionHandlers.getResponse(ex, ex::class))
             channel.close()
         }
     }
@@ -103,6 +103,10 @@ open class HttpEngine protected constructor(
         exceptionHandlers.forEach {
             it.onException(ex)
         }
+    }
+
+    override fun onException(ex: Exception, channel: SocketChannel) {
+        TODO("Not yet implemented")
     }
 
     data class Builder(
