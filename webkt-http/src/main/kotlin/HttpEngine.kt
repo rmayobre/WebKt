@@ -9,17 +9,13 @@ import http.message.Message
 import http.message.Request
 import http.message.Response
 import http.message.channel.MessageChannel
-import http.message.channel.factory.MessageBufferChannelFactory
 import http.message.channel.factory.MessageChannelFactory
 import http.route.Route
-import http.route.RunnableRoute
+import http.router.Router
 import http.session.HttpSession
 import http.session.factory.HttpSessionFactory
-import http.session.factory.SocketChannelHttpSessionFactory
 import java.io.IOException
-import java.net.InetAddress
 import java.net.InetSocketAddress
-import java.nio.channels.SelectionKey
 import java.nio.channels.SocketChannel
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
@@ -29,62 +25,104 @@ import kotlin.reflect.KClass
 /**
  * HTTP protocol layer of the channel.ServerSocketChannelEngine inheritance.
  */
-open class HttpEngine protected constructor(
-    private val routes: Map<String, Route>,
+abstract class HttpEngine protected constructor(
+    private val httpExceptionHandlers: MutableMap<KClass<*>, HttpExceptionInterceptor<*>> = mutableMapOf(),
+    private val exceptionHandlers: MutableList<ExceptionHandler> = mutableListOf(),
     private val service: ExecutorService,
-    host: String,
-    port: Int
-) : ServerSocketChannelEngine(InetSocketAddress(host, port), service) {
+    var readTimeout: Int = DEFAULT_READ_TIMEOUT,
+    var socketTimeout: Int = DEFAULT_SOCKET_TIMEOUT,
+    address: InetSocketAddress
+) : ServerSocketChannelEngine(address, service) {
 
-    private val factory: MessageChannelFactory = MessageBufferChannelFactory()
+    protected abstract val channelFactory: MessageChannelFactory
 
-//    private val sessionFactory: HttpSessionFactory<SocketChannel>
-//
-//    private val httpExceptionHandlers: Map<KClass<*>, HttpExceptionInterceptor<*>>
-//
-//    private val exceptionHandlers: List<ExceptionHandler>
+    protected abstract val sessionFactory: HttpSessionFactory<SocketChannel>
 
-    val networkList: NetworkList = EmptyNetworkList()
+//    private val routes: MutableMap<String, Route> = mutableMapOf(),
+    protected abstract val router: Router //TODO finish the router class.
 
-    var readTimeout: Int = DEFAULT_READ_TIMEOUT
-
-    var socketTimeout: Int = DEFAULT_SOCKET_TIMEOUT
+    protected open var networkList: NetworkList = EmptyNetworkList()
 
     @Throws(IOException::class)
     override fun onChannelAccepted(channel: SocketChannel) {
         if (networkList.permits(channel.socket().inetAddress)) {
             channel.socket().soTimeout = socketTimeout
-            registerToRead(channel)
+            registerToRead(channel, channelFactory.create(channel))
         } else {
             channel.close()
         }
     }
 
-    @Throws(IOException::class)
+    @Throws(
+        IOException::class,
+        TimeoutException::class,
+        BadRequestException::class)
     override fun onReadChannel(channel: SocketChannel, attachment: Any?) {
-        TODO("Not yet implemented")
+        val messageChannel: MessageChannel = attachment as MessageChannel
+        try {
+            val message: Message = messageChannel.read(readTimeout, TimeUnit.MILLISECONDS)
+            if (message is Request) {
+                val session: HttpSession = sessionFactory.create(channel, message)
+//                onNewSession(session)
+                TODO("Implement router logic.")
+//                routes[message.path]?.onRoute(session).also {
+//                    messageChannel.write(session.response)
+//                    if (!session.keepAlive) {
+//                        session.close()
+//                    } else if (session.isUpgrade) {
+////                        unregister(channel)
+//                    }
+//                } ?: throw BadRequestException("Path (path = \"${message.path}\") does not exist.")
+            } else {
+                throw BadRequestException("Expecting a Request to be sent.")
+            }
+        } catch (ex: HttpException) {
+            messageChannel.write(httpExceptionHandlers.getResponse(ex, ex.javaClass.kotlin))
+            channel.close()
+        }
     }
 
     @Throws(IOException::class)
     override fun onWriteChannel(channel: SocketChannel, attachment: Any?) {
+        val messageChannel = attachment as MessageChannel
+
         TODO("Not yet implemented")
     }
 
-    override fun onException(ex: Exception, channel: SocketChannel) {
-        TODO("Not yet implemented")
-    }
-
-    /**
-     *
-     * @param address to be added to the NetworkList
-     * @see NetworkList
-     */
-    fun addAddressToList(address: InetAddress): Boolean =
-        when(networkList) {
-            is AllowList -> networkList.add(address)
-            is BlockList -> networkList.add(address)
-            is EmptyNetworkList -> false
+    override fun onException(channel: SocketChannel, attachment: Any?, ex: Exception) {
+        when (ex) {
+            is HttpException -> {
+                val messageChannel = attachment as MessageChannel
+                messageChannel.write(httpExceptionHandlers.getResponse(ex, ex.javaClass.kotlin))
+                channel.close()
+            }
+            else -> {
+                ex.printStackTrace()
+                TODO("Create a default response for exceptions.")
+            }
         }
+    }
+
+//    /**
+//     *
+//     * @param address to be added to the NetworkList
+//     * @see NetworkList
+//     */
+//    fun addAddressToList(address: InetAddress): Boolean =
+//        when(networkList) {
+//            is AllowList -> networkList.add(address)
+//            is BlockList -> networkList.add(address)
+//            is EmptyNetworkList -> false
+//        }
+
+
+//    /**
+//     * The engine created
+//     */
+//    @Throws(IOException::class)
+//    protected abstract fun onNewSession(session: HttpSession)
+
+
 
 //    override fun start() {
 //        synchronized(routes) {

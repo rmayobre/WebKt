@@ -8,7 +8,6 @@ class MessageBufferChannelFactory(
         private val bufferSize: Int = DEFAULT_BUFFER_SIZE
 ): MessageChannelFactory {
     override fun create(channel: SocketChannel): MessageChannel {
-        channel.configureBlocking(false)
         return MessageBufferChannel(channel, bufferSize)
     }
 }

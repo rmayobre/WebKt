@@ -11,4 +11,5 @@ interface HttpSession : Closeable {
     var response: Message
     val keepAlive: Boolean
     val isUpgrade: Boolean
+    // TODO add a write function.
 }

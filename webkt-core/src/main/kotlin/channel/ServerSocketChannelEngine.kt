@@ -106,7 +106,7 @@ abstract class ServerSocketChannelEngine(
 
     override fun onException(ex: Exception, key: SelectionKey) {
         key.cancel()
-        onException(ex, key.channel() as SocketChannel)
+        onException(key.channel() as SocketChannel, key.attachment(), ex)
     }
 
     /**
@@ -140,8 +140,9 @@ abstract class ServerSocketChannelEngine(
      * from Selector after an exception occurs, by default.
      * @param ex Exception that was thrown.
      * @param channel The channel being used while the exception occurred.
+     * @param attachment a nullable attachment provided with SocketChannel
      */
-    protected abstract fun onException(ex: Exception, channel: SocketChannel)
+    protected abstract fun onException(channel: SocketChannel, attachment: Any?, ex: Exception)
 
     companion object {
         private const val DEFAULT_THREAD_NAME = "server-socket-channel-engine"
