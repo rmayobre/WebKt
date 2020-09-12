@@ -7,9 +7,10 @@ import java.nio.channels.Channel
 
 interface HttpSession : Closeable {
     val channel: Channel
-    val request: Request
-    var response: Message
+    var request: Message?
+    var response: Message?
     val keepAlive: Boolean
     val isUpgrade: Boolean
     // TODO add a write function.
+
 }
