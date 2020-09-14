@@ -16,6 +16,7 @@ import http.session.HttpSession
 import http.session.factory.HttpSessionFactory
 import java.io.IOException
 import java.net.InetSocketAddress
+import java.nio.channels.SelectableChannel
 import java.nio.channels.SocketChannel
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
@@ -89,7 +90,7 @@ abstract class HttpEngine protected constructor(
         TODO("Not yet implemented")
     }
 
-    override fun onException(channel: SocketChannel, attachment: Any?, ex: Exception) {
+    override fun onException(channel: SelectableChannel, attachment: Any?, ex: Exception) {
         when (ex) {
             is HttpException -> {
                 val messageChannel = attachment as MessageChannel

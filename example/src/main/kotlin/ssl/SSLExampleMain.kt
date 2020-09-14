@@ -5,6 +5,7 @@ import channel.ssl.SSLSocketChannel
 import java.io.*
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
+import java.nio.channels.SelectableChannel
 import java.nio.channels.SocketChannel
 import java.nio.file.Paths
 import java.security.KeyStore
@@ -70,8 +71,13 @@ private class ExampleSSLServerEngine(context: SSLContext): SSLServerSocketChanne
         registerToRead(channel)
     }
 
-    override fun onException(ex: Exception, channel: SocketChannel) {
+    override fun onException(channel: SelectableChannel, attachment: Any?, ex: Exception) {
         println("Exception on channel: $channel -> $ex")
+        ex.printStackTrace()
+    }
+
+    override fun onException(channel: SSLSocketChannel, attachment: Any?, ex: Exception) {
+        println("Exception on SSLSocketChannel: $channel -> $ex")
         ex.printStackTrace()
     }
 
