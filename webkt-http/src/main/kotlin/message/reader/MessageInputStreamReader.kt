@@ -2,8 +2,8 @@ package http.message.reader
 
 import http.message.BadMessageException
 import http.message.Message
-import http.message.buildMessage
-import http.message.splitHeader
+import http.message.channel.buildMessage
+import http.message.channel.splitHeader
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStream

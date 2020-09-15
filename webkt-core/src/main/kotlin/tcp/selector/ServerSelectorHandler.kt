@@ -1,4 +1,4 @@
-package channel.selector
+package tcp.selector
 
 import java.io.IOException
 import java.nio.channels.SelectableChannel

@@ -1,12 +1,11 @@
 package ssl
 
-import channel.ssl.SSLServerSocketChannelEngine
-import channel.ssl.SSLSocketChannel
+import tcp.ssl.SSLServerSocketChannelEngine
+import tcp.ssl.SSLSocketChannel
 import java.io.*
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 import java.nio.channels.SelectableChannel
-import java.nio.channels.SocketChannel
 import java.nio.file.Paths
 import java.security.KeyStore
 import java.util.concurrent.LinkedBlockingDeque

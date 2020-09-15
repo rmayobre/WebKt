@@ -1,6 +1,6 @@
 package http
 
-import channel.ServerSocketChannelEngine
+import tcp.ServerSocketChannelEngine
 import http.exception.BadRequestException
 import http.exception.ExceptionHandler
 import http.exception.HttpException
@@ -34,6 +34,7 @@ abstract class HttpEngine protected constructor(
     address: InetSocketAddress
 ) : ServerSocketChannelEngine(address, service) {
 
+
     protected abstract val channelFactory: MessageChannelFactory
 
     protected abstract val sessionFactory: SessionFactory<SocketChannel>
@@ -54,19 +55,27 @@ abstract class HttpEngine protected constructor(
     @Throws(IOException::class)
     override fun onChannelAccepted(channel: SocketChannel) {
         if (networkList.permits(channel.socket().inetAddress)) {
+            // TODO create a session once a channel is accepted.
             channel.socket().soTimeout = socketTimeout
             registerToRead(channel, channelFactory.create(channel))
+            // TODO attach session to channel registry
         } else {
             channel.close()
         }
     }
 
+    /*
+    THINK ABOUT THE LIFECYCLE
+
+    This will be implemented as a class built by the use to be implemented in their application.
+     */
     @Throws(
         IOException::class,
         TimeoutException::class,
         BadRequestException::class)
     override fun onReadChannel(channel: SocketChannel, attachment: Any?) {
         val messageChannel: MessageChannel = attachment as MessageChannel
+        // TODO get session from attachment.
         try {
             val message: Message = messageChannel.read(readTimeout, TimeUnit.MILLISECONDS)
             if (message is Request) {

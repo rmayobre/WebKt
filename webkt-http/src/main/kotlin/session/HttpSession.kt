@@ -1,60 +1,61 @@
 package http.session
 
-import http.Transaction
 import http.message.Message
-import http.message.Request
 import http.message.channel.MessageChannel
-import java.nio.channels.Channel
 import java.util.*
-import java.util.concurrent.TimeUnit
 
-class HttpSession(
-    channel: MessageChannel
-) : Session<MessageChannel> {
+abstract class HttpSession(
+    override val channel: MessageChannel
+) : Session<Message> {
 
     private val uuid: UUID = UUID.randomUUID()
 
-    private val transactions: MutableSet<Transaction> = mutableSetOf()
+    private val messages: MutableSet<Message> = mutableSetOf()
 
     override val id: String
         get() = uuid.toString()
 
     override val created: Long = System.currentTimeMillis()
 
-    override val channel: MessageChannel = MessageChannelWrapper(channel)
+    override val history: Set<Message>
+        get() = messages
 
-    override val history: Set<Transaction>
-        get() = transactions
-
-    override val keepAlive: Boolean
+    override val pendingRequest: Message?
         get() = TODO("Not yet implemented")
 
-    override fun close() {
-        // TODO send message? - Should an Session be closeable?
-        channel.close()
+    override fun sendResponse(response: Message) {
+        TODO("Not yet implemented")
     }
 
-    private class MessageChannelWrapper(
-        private val channel: MessageChannel
-    ): MessageChannel by channel {
-        override fun read(): Message {
-            val message = channel.read()
-            // TODO - record message.
-            return message
-        }
+    fun record(message: Message): Boolean =
+        messages.add(message)
 
-        override fun read(time: Int, unit: TimeUnit): Message {
-            val message = channel.read(time, unit)
-            // TODO - record message.
-            return message
-        }
+//    override val channel: MessageChannel = object : MessageChannel by _channel {
+//        override fun read(): Message {
+//            val message = _channel.read()
+//            transactions.add(message)
+//            return message
+//        }
+//
+//        override fun read(time: Int, unit: TimeUnit): Message {
+//            val message = _channel.read(time, unit)
+//            transactions.add(message)
+//            return message
+//        }
+//
+//        override fun write(message: Message): Int {
+//            val bytesWritten = _channel.write(message)
+//            transactions.add(message)
+//            return bytesWritten
+//        }
+//    }
 
-        override fun write(message: Message): Int {
-            val bytesWritten = channel.write(message)
-            // TODO - record message.
-            return bytesWritten
-        }
-    }
+
+
+//    override val keepAlive: Boolean
+//        get() = TODO("Not yet implemented")
+
+
 }
 //(
 //    override val channel: Channel,

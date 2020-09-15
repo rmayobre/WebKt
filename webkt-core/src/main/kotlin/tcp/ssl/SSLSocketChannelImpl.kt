@@ -1,36 +1,28 @@
-package channel.ssl
+package tcp.ssl
 
 import java.io.IOException
 import java.net.InetAddress
 import java.net.SocketAddress
 import java.nio.ByteBuffer
-import java.nio.channels.*
+import java.nio.channels.ByteChannel
+import java.nio.channels.SocketChannel
 import java.util.concurrent.Executor
 import javax.net.ssl.*
-import javax.net.ssl.SSLEngineResult.HandshakeStatus
-import javax.net.ssl.SSLEngineResult.HandshakeStatus.*
-import javax.net.ssl.SSLEngineResult.Status.*
 import kotlin.math.min
 
-/**
- * A Secure Socket Layer implementation of a ByteChannel. This channel is not selectable. Registering this
- * channel to a Selector will not work, however, it can be an attachment. This feature may become available
- * in future iterations. Essentially, this channel is a Wrapper for a SocketChannel and a SSEngine with the
- * added function [performHandshake].
- */
-class SSLSocketChannel
+internal class SSLSocketChannelImpl
 
 @Throws(SSLException::class)
 constructor(
     /** Source SocketChannel this class wraps. */
-    internal val channel: SocketChannel,
+    override val channel: SocketChannel,
 
     /** SSLEngine used for the Secure-Socket communications. */
     private val engine: SSLEngine,
 
     /** Executor for delegated tasks. */
     private var executor: Executor? = null
-) : ByteChannel by channel {
+) : SSLSocketChannel, ByteChannel by channel {
 
     /**
      * Application data received from THIS endpoint.
@@ -52,28 +44,22 @@ constructor(
      */
     private var peerPacketData: ByteBuffer
 
-    /** Channel's SSLSession created from SSLEngine. */
-    val session: SSLSession
+    override val session: SSLSession
         get() = engine.session
 
-    /** Get the socket's InetAddress */
-    val inetAddress: InetAddress
+    override val inetAddress: InetAddress
         get() = channel.socket().inetAddress
 
-    /** Get the channel's remote address. */
-    val remoteAddress: SocketAddress
+    override val remoteAddress: SocketAddress
         get() = channel.remoteAddress
 
-    /** Get the channel's remote port. */
-    val remotePort: Int
+    override val remotePort: Int
         get() = channel.socket().port
 
-    /** Get the channel's local address. */
-    val localAddress: SocketAddress
+    override val localAddress: SocketAddress
         get() = channel.localAddress
 
-    /** Get the channel's local port. */
-    val localPort: Int
+    override val localPort: Int
         get() = channel.socket().localPort
 
     init {
@@ -103,15 +89,15 @@ constructor(
             packetData.clear()
             val result: SSLEngineResult = engine.wrap(applicationData, packetData)
             when (result.status) {
-                OK -> {
+                SSLEngineResult.Status.OK -> {
                     packetData.flip()
                     while (packetData.hasRemaining()) {
                         bytesWritten += channel.write(packetData)
                     }
                 }
-                BUFFER_UNDERFLOW -> throw SSLException("Buffer underflow occurred while writing.")
-                BUFFER_OVERFLOW -> throw SSLException("Buffer overflow occurred while writing.")
-                CLOSED -> {
+                SSLEngineResult.Status.BUFFER_UNDERFLOW -> throw SSLException("Buffer underflow occurred while writing.")
+                SSLEngineResult.Status.BUFFER_OVERFLOW -> throw SSLException("Buffer overflow occurred while writing.")
+                SSLEngineResult.Status.CLOSED -> {
                     close()
                     return bytesWritten
                 }
@@ -144,19 +130,19 @@ constructor(
                 peerApplicationData.compact()
                 val result: SSLEngineResult = engine.unwrap(peerPacketData, peerApplicationData)
                 when (result.status) {
-                    OK -> {
+                    SSLEngineResult.Status.OK -> {
                         peerApplicationData.flip()
                         peerApplicationData.copyBytesTo(buffer)
                     }
-                    BUFFER_UNDERFLOW -> {
+                    SSLEngineResult.Status.BUFFER_UNDERFLOW -> {
                         peerApplicationData.flip()
                         peerApplicationData.copyBytesTo(buffer)
                     }
-                    BUFFER_OVERFLOW -> {
+                    SSLEngineResult.Status.BUFFER_OVERFLOW -> {
                         peerApplicationData = peerApplicationData.increaseBufferSizeTo(session.applicationBufferSize)
                         read(buffer)
                     }
-                    CLOSED -> {
+                    SSLEngineResult.Status.CLOSED -> {
                         close()
                         buffer.clear()
                         return -1
@@ -187,47 +173,20 @@ constructor(
         channel.close()
     }
 
-    /**
-     * Implements the handshake protocol between two peers, required for the establishment of the SSL/TLS connection.
-     * During the handshake, encryption configuration information - such as the list of available cipher suites - will be exchanged
-     * and if the handshake is successful will lead to an established SSL/TLS session.
-     *
-     * Handshake is also used during the end of the session, in order to properly close the connection between the two peers.
-     * A proper connection close will typically include the one peer sending a CLOSE message to another, and then wait for
-     * the other's CLOSE message to close the transport link. The other peer from his perspective would read a CLOSE message
-     * from his peer and then enter the handshake procedure to send his own CLOSE message as well.
-     *
-     * Example handshake process:
-     *
-     * 1. wrap:     ClientHello
-     * 2. unwrap:   ServerHello/Cert/ServerHelloDone
-     *
-     *    unwrap (continued):
-     *              The unwrap process could happen multiple
-     *              times if the SocketChannel is non-blocking.
-     *
-     * 3. wrap:     ClientKeyExchange
-     * 4. wrap:     ChangeCipherSpec
-     * 5. wrap:     Finished
-     * 6. unwrap:   ChangeCipherSpec
-     * 7. unwrap:   Finished
-     *
-     * @return True if the connection handshake was successful or false if an error occurred.
-     * @throws IOException - if an error occurs during read/write to the socket channel.
-     */
+
     @Synchronized
     @Throws(IOException::class)
-    fun performHandshake(): Boolean {
+    override fun performHandshake(): Boolean {
         try {
-            var status: HandshakeStatus
-            while (engine.handshakeStatus.also { status = it } != NOT_HANDSHAKING) {
+            var status: SSLEngineResult.HandshakeStatus
+            while (engine.handshakeStatus.also { status = it } != SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING) {
                 if (engine.isOutboundDone || engine.isInboundDone) {
                     return false
                 }
                 when (status) {
-                    NEED_WRAP -> wrap()
-                    NEED_UNWRAP -> unwrap()
-                    NEED_TASK -> runDelegatedTasks()
+                    SSLEngineResult.HandshakeStatus.NEED_WRAP -> wrap()
+                    SSLEngineResult.HandshakeStatus.NEED_UNWRAP -> unwrap()
+                    SSLEngineResult.HandshakeStatus.NEED_TASK -> runDelegatedTasks()
                     else -> if (peerPacketData.hasRemaining()) { // FINISHED
                         channel.write(peerPacketData)
                     }
@@ -245,8 +204,8 @@ constructor(
         packetData.clear()
         val result: SSLEngineResult = engine.wrap(applicationData, packetData)
         when (result.status!!) {
-            BUFFER_UNDERFLOW -> packetData = packetData.increaseBufferSizeTo(session.packetBufferSize)
-            BUFFER_OVERFLOW -> throw SSLException("Buffer underflow occurred while wrapping.")
+            SSLEngineResult.Status.BUFFER_UNDERFLOW -> packetData = packetData.increaseBufferSizeTo(session.packetBufferSize)
+            SSLEngineResult.Status.BUFFER_OVERFLOW -> throw SSLException("Buffer underflow occurred while wrapping.")
             else -> writeFromPacketData()
         }
     }
@@ -263,7 +222,7 @@ constructor(
             peerPacketData.compact()
 
             val retry: Boolean = when (result.status!!) {
-                BUFFER_UNDERFLOW -> {
+                SSLEngineResult.Status.BUFFER_UNDERFLOW -> {
                     // Check if peer packet data is large enough.
                     if (session.packetBufferSize > peerPacketData.limit()) {
                         println("Increased Buffer Size")
@@ -279,14 +238,14 @@ constructor(
                     // Retry operations
                     true
                 }
-                BUFFER_OVERFLOW -> {
+                SSLEngineResult.Status.BUFFER_OVERFLOW -> {
                     // Resize peer application data.
                     peerApplicationData = peerApplicationData.increaseBufferSizeTo(session.applicationBufferSize)
                     // Retry operations.
                     true
                 }
                 else -> {
-                    if (result.status == CLOSED) {
+                    if (result.status == SSLEngineResult.Status.CLOSED) {
                         engine.closeOutbound()
                     }
                     false
@@ -340,18 +299,6 @@ constructor(
     companion object {
 
         /**
-         * Create a SSLSocketChannel to be used as a client connection.
-         * @param address the socket address for the channel.ssl.SSLSocketChannel to connect to.
-         * @param context Security context for the connection.
-         */
-        fun client(address: SocketAddress, context: SSLContext): SSLSocketChannel = SSLSocketChannel(
-            channel = SocketChannel.open(address),
-            engine = context.createSSLEngine().apply {
-                useClientMode = true
-            }
-        )
-
-        /**
          * Compares `sessionProposedCapacity` with buffer's capacity. If buffer's capacity is smaller,
          * returns a buffer with the proposed capacity. If it's equal or larger, returns a buffer
          * with capacity twice the size of the initial one.
@@ -385,22 +332,3 @@ constructor(
             }
     }
 }
-/*
- *                   app data
- *
- *                |           ^
- *                |     |     |
- *                v     |     |
- *           +----+-----|-----+----+
- *           |          |          |
- *           |       SSL|Engine    |
- *   wrap()  |          |          |  unwrap()
- *           | OUTBOUND | INBOUND  |
- *           |          |          |
- *           +----+-----|-----+----+
- *                |     |     ^
- *                |     |     |
- *                v           |
- *
- *                   net data
- */

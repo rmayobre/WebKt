@@ -1,9 +1,9 @@
 package http.message.reader
 
 import http.message.*
-import http.message.HEADER_REGEX
-import http.message.buildMessage
-import http.message.readLine
+import http.message.channel.HEADER_REGEX
+import http.message.channel.buildMessage
+import http.message.channel.readLine
 import java.nio.ByteBuffer
 import java.nio.channels.SocketChannel
 import java.util.concurrent.TimeUnit

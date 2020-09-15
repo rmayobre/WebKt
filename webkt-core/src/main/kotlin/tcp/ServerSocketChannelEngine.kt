@@ -1,9 +1,9 @@
-package channel
+package tcp
 
-import channel.selector.ACCEPT_OPERATION
-import channel.selector.READ_OPERATION
-import channel.selector.ServerSelectorHandler
-import channel.selector.WRITE_OPERATION
+import tcp.selector.ACCEPT_OPERATION
+import tcp.selector.READ_OPERATION
+import tcp.selector.ServerSelectorHandler
+import tcp.selector.WRITE_OPERATION
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.nio.channels.*

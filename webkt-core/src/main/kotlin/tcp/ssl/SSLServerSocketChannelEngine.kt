@@ -1,9 +1,10 @@
-package channel.ssl
+package tcp.ssl
 
-import channel.AbstractServerSocketChannelEngine
-import channel.selector.READ_OPERATION
-import channel.selector.ServerSelectorHandler
-import channel.selector.WRITE_OPERATION
+import tcp.AbstractServerSocketChannelEngine
+import tcp.selector.READ_OPERATION
+import tcp.selector.ServerSelectorHandler
+import tcp.selector.WRITE_OPERATION
+import tcp.ssl.factory.SSLSocketChannelFactory
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.nio.channels.SelectableChannel
@@ -15,19 +16,16 @@ import javax.net.ssl.SSLContext
  * Secure Socket Layer implementation for an AbstractServerSocketChannelEngine.
  */
 abstract class SSLServerSocketChannelEngine(
-    private val context: SSLContext,
     address: InetSocketAddress,
     service: ExecutorService,
     threadName: String = DEFAULT_THREAD_NAME
 ): AbstractServerSocketChannelEngine(address, service, threadName) {
 
+    protected abstract val factory: SSLSocketChannelFactory
+
     override val handler: ServerSelectorHandler = object : ServerSelectorHandler {
         override fun onChannelAccepted(channel: SocketChannel) {
-            val engine = context.createSSLEngine().apply {
-                useClientMode = false
-                needClientAuth = true
-            }
-            val sslChannel = SSLSocketChannel(channel, engine)
+            val sslChannel = factory.create(channel)
             onSSLHandshake(sslChannel)
         }
 
