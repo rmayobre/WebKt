@@ -1,12 +1,12 @@
 package http.router
 
 import http.route.Route
-import http.session.HttpSession
+import http.session.Session
 
 class Router {
     private val routes: MutableMap<String, Route> = mutableMapOf()
 
-    fun inRoute(session: HttpSession): Boolean {
+    fun inRoute(session: Session): Boolean {
 //        if (routes[route.path] == null) {
 //            return false
 //        }

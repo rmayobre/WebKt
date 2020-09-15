@@ -99,7 +99,7 @@ class MessageBufferChannel(
         return buildMessage(requestLine, headers)
     }
 
-    override fun write(message: Message) {
+    override fun write(message: Message): Int {
         val output: ByteArrayOutputStream = ByteArrayOutputStream().apply {
             write((message.line + "\n").toByteArray())
             write(message.headersToString().toByteArray())
@@ -109,7 +109,7 @@ class MessageBufferChannel(
                 write("\r\n".toByteArray())
             }
         }
-        channel.write(ByteBuffer.wrap(output.toByteArray()))
+        return channel.write(ByteBuffer.wrap(output.toByteArray()))
     }
 
     companion object {

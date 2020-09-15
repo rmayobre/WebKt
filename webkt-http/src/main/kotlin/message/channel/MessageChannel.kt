@@ -20,5 +20,5 @@ interface MessageChannel : Channel {
     fun read(time: Int, unit: TimeUnit): Message
 
     @Throws(IOException::class)
-    fun write(message: Message)
+    fun write(message: Message): Int
 }

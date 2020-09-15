@@ -1,12 +1,11 @@
 package http.route
 
 import http.exception.HttpException
-import http.message.Message
-import http.session.HttpSession
+import http.session.Session
 
 interface Route {
     val path: String
 
     @Throws(HttpException::class)
-    fun onRoute(session: HttpSession)
+    fun onRoute(session: Session)
 }

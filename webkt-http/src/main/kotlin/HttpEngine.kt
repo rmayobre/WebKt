@@ -10,10 +10,9 @@ import http.message.Request
 import http.message.Response
 import http.message.channel.MessageChannel
 import http.message.channel.factory.MessageChannelFactory
-import http.route.Route
 import http.router.Router
-import http.session.HttpSession
-import http.session.factory.HttpSessionFactory
+import http.session.Session
+import http.session.factory.SessionFactory
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.nio.channels.SelectableChannel
@@ -37,12 +36,20 @@ abstract class HttpEngine protected constructor(
 
     protected abstract val channelFactory: MessageChannelFactory
 
-    protected abstract val sessionFactory: HttpSessionFactory<SocketChannel>
+    protected abstract val sessionFactory: SessionFactory<SocketChannel>
 
 //    private val routes: MutableMap<String, Route> = mutableMapOf(),
     protected abstract val router: Router //TODO finish the router class.
 
     protected open var networkList: NetworkList = EmptyNetworkList()
+
+    /*
+    TODO the new lifescycle
+
+    1. OnChannelAccepted - Create an HTTPSession
+    2. onRead - Read from HTTPSession.
+    3. onWrite - write from HTTPSession.
+     */
 
     @Throws(IOException::class)
     override fun onChannelAccepted(channel: SocketChannel) {
@@ -63,7 +70,7 @@ abstract class HttpEngine protected constructor(
         try {
             val message: Message = messageChannel.read(readTimeout, TimeUnit.MILLISECONDS)
             if (message is Request) {
-                val session: HttpSession = sessionFactory.create(channel, message)
+                val session: Session = sessionFactory.create(channel, message)
 //                onNewSession(session)
                 TODO("Implement router logic.")
 //                routes[message.path]?.onRoute(session).also {

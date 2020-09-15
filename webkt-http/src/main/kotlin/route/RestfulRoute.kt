@@ -8,14 +8,14 @@ import http.exception.BadRequestException
 import http.exception.HttpException
 import http.exception.NotFoundException
 import http.message.Response
-import http.session.HttpSession
+import http.session.Session
 import java.io.File
 import java.net.URL
 import java.nio.file.Files
 
 open class RestfulRoute(override val path: String) : Route {
 
-    override fun onRoute(session: HttpSession) {
+    override fun onRoute(session: Session) {
         when (session.request.method) {
             Method.GET -> onGet(session)
             Method.PUT -> onPut(session)
@@ -29,46 +29,46 @@ open class RestfulRoute(override val path: String) : Route {
     }
 
     @Throws(HttpException::class)
-    protected open fun onGet(session: HttpSession) {
+    protected open fun onGet(session: Session) {
         throw BadRequestException("This path does not support GET method.")
     }
 
     @Throws(HttpException::class)
-    protected open fun onPut(session: HttpSession) {
+    protected open fun onPut(session: Session) {
         throw BadRequestException("This path does not support PUT method.")
     }
 
     @Throws(HttpException::class)
-    protected open fun onPost(session: HttpSession) {
+    protected open fun onPost(session: Session) {
         throw BadRequestException("This path does not support POST method.")
     }
 
     @Throws(HttpException::class)
-    protected open fun onDelete(session: HttpSession) {
+    protected open fun onDelete(session: Session) {
         throw BadRequestException("This path does not support DELETE method.")
     }
 
     @Throws(HttpException::class)
-    protected open fun onHead(session: HttpSession) {
+    protected open fun onHead(session: Session) {
         throw BadRequestException("This path does not support HEAD method.")
     }
 
     @Throws(HttpException::class)
-    protected open fun onOptions(session: HttpSession) {
+    protected open fun onOptions(session: Session) {
         throw BadRequestException("This path does not support OPTIONS method.")
     }
 
     @Throws(HttpException::class)
-    protected open fun onTrace(session: HttpSession) {
+    protected open fun onTrace(session: Session) {
         throw BadRequestException("This path does not support TRACE method.")
     }
 
     @Throws(HttpException::class)
-    protected open fun onConnect(session: HttpSession) {
+    protected open fun onConnect(session: Session) {
         throw BadRequestException("This path does not support CONNECT method.")
     }
 
-    protected fun HttpSession.loadResourceAsResponse(resource: String, contentType: ContentType) {
+    protected fun Session.loadResourceAsResponse(resource: String, contentType: ContentType) {
         response = loadResourceAsStringOrNull(resource)?.let { resourceStr ->
             Response.Builder(Status.OK)
                 .addHeader("Content-Type", contentType.headerValue)

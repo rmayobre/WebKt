@@ -4,7 +4,7 @@ import http.exception.BadRequestException
 import http.exception.HttpException
 import http.message.Request
 import http.route.RunnableRoute
-import http.session.HttpSession
+import http.session.Session
 import websocket.*
 import websocket.frame.OpCode
 import websocket.server.session.WebsocketSession
@@ -35,7 +35,7 @@ abstract class WebsocketRoute(
         get() = running
 
     @Throws(HttpException::class)
-    override fun onRoute(session: HttpSession) {
+    override fun onRoute(session: Session) {
         val channel: SocketChannel = session.channel as SocketChannel
         if (session.request.isWebsocketUpgrade()) {
             try {
