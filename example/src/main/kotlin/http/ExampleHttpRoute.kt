@@ -1,8 +1,8 @@
-package example.http
+package http
 
-import http.content.TextType
-import http.route.RestfulRoute
-import http.session.Session
+import TextType
+import route.RestfulRoute
+import session.Session
 
 class ExampleHttpRoute : RestfulRoute("/") {
 

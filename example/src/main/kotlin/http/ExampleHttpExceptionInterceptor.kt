@@ -2,7 +2,7 @@ package http
 
 import http.exception.HttpException
 import http.exception.HttpExceptionInterceptor
-import http.message.Response
+import message.Response
 
 class ExampleHttpExceptionInterceptor : HttpExceptionInterceptor<HttpException>(HttpException::class) {
     override fun onException(exception: HttpException): Response {

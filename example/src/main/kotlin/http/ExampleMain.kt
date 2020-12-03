@@ -1,7 +1,7 @@
-package example.http
+package http
 
-import http.ExampleWebsocketRoute
-import http.route.Route
+import http.ExampleServer
+import route.Route
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.concurrent.*

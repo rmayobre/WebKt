@@ -1,4 +1,4 @@
-package example.http
+package http
 
 import http.exception.ExceptionHandler
 import java.lang.Exception
