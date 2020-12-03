@@ -1,0 +1,10 @@
+rootProject.name = "WebKt"
+include("core")//, "http", "websocket")
+include("http")
+include("websocket")
+include("http-client")
+include("http-server")
+include("websocket-client")
+include("websocket-server")
+include("core-tcp")
+include("example")
