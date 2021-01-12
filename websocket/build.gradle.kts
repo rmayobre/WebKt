@@ -1,5 +1,6 @@
 plugins {
     kotlin("jvm") version "1.4.20"
+    `java-library`
 }
 
 group = "io.webkt"

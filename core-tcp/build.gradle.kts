@@ -1,6 +1,6 @@
 plugins {
     kotlin("jvm") version Deps.Version.kotlin
-    "java-library"
+    `java-library`
 }
 
 group = "io.webkt"
@@ -13,6 +13,7 @@ repositories {
 dependencies {
     api(project(":core"))
     implementation(Deps.kotlin)
+    implementation(Deps.coroutines)
     testImplementation(Deps.junit)
     testImplementation(Deps.mockk)
 }

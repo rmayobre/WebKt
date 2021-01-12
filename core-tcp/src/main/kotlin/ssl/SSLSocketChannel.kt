@@ -37,6 +37,12 @@ interface SSLSocketChannel : ByteChannel, Channel {
     val localPort: Int
 
     /**
+     * Bind a local address for the channel.
+     * @return current instance of channel.
+     */
+    fun bind(address: SocketAddress): SSLSocketChannel
+
+    /**
      * Implements the handshake protocol between two peers, required for the establishment of the SSL/TLS connection.
      * During the handshake, encryption configuration information - such as the list of available cipher suites - will be exchanged
      * and if the handshake is successful will lead to an established SSL/TLS session.
@@ -64,8 +70,7 @@ interface SSLSocketChannel : ByteChannel, Channel {
      * @return True if the connection handshake was successful or false if an error occurred.
      * @throws IOException if an error occurs during read/write to the socket channel.
      */
-    @Throws(IOException::class)
-    fun performHandshake(): Boolean
+    suspend fun performHandshake(): HandshakeResult
 
     companion object {
 
@@ -75,6 +80,7 @@ interface SSLSocketChannel : ByteChannel, Channel {
          * @param context Security context for the connection.
          * @param executor An optional executor to handle delegated tasks in the background.
          */
+        @Deprecated("remove")
         fun client(address: SocketAddress, context: SSLContext, executor: Executor? = null): SSLSocketChannel =
             open(
                 address = address,
@@ -91,6 +97,7 @@ interface SSLSocketChannel : ByteChannel, Channel {
          * @param context Security context for the connection.
          * @param executor An optional executor to handle delegated tasks in the background.
          */
+        @Deprecated("remove")
         fun server(address: SocketAddress, context: SSLContext, executor: Executor? = null): SSLSocketChannel =
             open(
                 address = address,
@@ -107,6 +114,7 @@ interface SSLSocketChannel : ByteChannel, Channel {
          * @param context Security context for the connection.
          * @param executor An optional executor to handle delegated tasks in the background.
          */
+        @Deprecated("remove")
         fun open(address: SocketAddress, engine: SSLEngine, executor: Executor? = null): SSLSocketChannel =
             SSLSocketChannelImpl(
                 channel = SocketChannel.open(address),

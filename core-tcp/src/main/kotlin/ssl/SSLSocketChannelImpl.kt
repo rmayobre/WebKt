@@ -25,22 +25,22 @@ constructor(
 ) : SSLSocketChannel, ByteChannel by channel {
 
     /**
-     * Application data received from THIS endpoint.
+     * Application data sent from THIS endpoint.
      */
     private var applicationData: ByteBuffer
 
     /**
-     * Application data received from OTHER endpoint.
+     * Application data received from REMOTE endpoint.
      */
     private var peerApplicationData: ByteBuffer
 
     /**
-     * Encrypted data received from THIS endpoint.
+     * Encrypted data sent from THIS endpoint.
      */
     private var packetData: ByteBuffer
 
     /**
-     * Encrypted data received from OTHER endpoint.
+     * Encrypted data received from REMOTE endpoint.
      */
     private var peerPacketData: ByteBuffer
 
