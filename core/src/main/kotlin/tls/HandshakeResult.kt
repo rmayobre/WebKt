@@ -1,6 +1,4 @@
-package ssl
-
-import tls.HandshakeResult
+package tls
 
 sealed class HandshakeResult {
 

@@ -12,4 +12,7 @@ repositories {
 
 dependencies {
     implementation(Deps.kotlin)
+    implementation(Deps.coroutines)
+    testImplementation(Deps.junit)
+    testImplementation(Deps.mockk)
 }

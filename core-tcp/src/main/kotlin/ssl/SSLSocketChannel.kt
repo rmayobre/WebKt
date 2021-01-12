@@ -1,11 +1,13 @@
 package ssl
 
+import tls.HandshakeResult
 import java.io.IOException
 import java.net.InetAddress
 import java.net.SocketAddress
 import java.nio.channels.*
 import java.util.concurrent.Executor
 import javax.net.ssl.*
+import kotlin.jvm.Throws
 
 /**
  * A Secure Socket Layer implementation of a ByteChannel. This channel is not selectable. Registering this
@@ -70,6 +72,7 @@ interface SSLSocketChannel : ByteChannel, Channel {
      * @return True if the connection handshake was successful or false if an error occurred.
      * @throws IOException if an error occurs during read/write to the socket channel.
      */
+    @Throws(IOException::class)
     suspend fun performHandshake(): HandshakeResult
 
     companion object {
