@@ -1,4 +1,4 @@
-import engine.ServerChannelEngine
+import engine.ServerSocketChannelEngine
 import exception.BadRequestException
 import exception.ExceptionHandler
 import exception.HttpException
@@ -25,7 +25,7 @@ abstract class HttpEngine protected constructor(
     service: ExecutorService,
     var readTimeout: Int = DEFAULT_READ_TIMEOUT,
     var socketTimeout: Int = DEFAULT_SOCKET_TIMEOUT
-) : ServerChannelEngine(address, service) {
+) : ServerSocketChannelEngine(address, service) {
 
     //    private val routes: MutableMap<String, Route> = mutableMapOf(),
     protected abstract val router: Router //TODO finish the router class.
