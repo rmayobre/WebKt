@@ -1,4 +1,4 @@
-package selector
+package old
 
 import java.nio.channels.SelectableChannel
 import java.nio.channels.SelectionKey
@@ -122,7 +122,7 @@ open class SelectorRunnable(
      * @param channel SelectableChannel to be registered to Selector.
      * @param operation Operation the Channel will be registered to perform. NOTE, you can register multiple operations at the same time.
      * @param attachment An attachment to be provided for the channel's next operation.
-     * @see ACCEPT_OPERATION
+     * @see AcceptOperation
      * @see CONNECT_OPERATION
      * @see READ_OPERATION
      * @see WRITE_OPERATION
@@ -156,7 +156,7 @@ open class SelectorRunnable(
      * that has incoming data being sent from the opposing endpoint.
      * @param key The SelectionKey providing the SelectableChannel with a new incoming connection.
      */
-    protected open fun onRead(key: SelectionKey) {
+    protected open suspend fun onRead(key: SelectionKey) {
         key.cancel()
     }
 

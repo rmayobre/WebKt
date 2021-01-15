@@ -1,6 +1,6 @@
 package session
 
-import TypeChannel
+import old.TypeChannel
 import javax.net.ssl.SSLSession
 
 /**

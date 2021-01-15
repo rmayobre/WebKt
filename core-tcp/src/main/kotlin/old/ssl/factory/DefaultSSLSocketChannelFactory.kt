@@ -1,7 +1,7 @@
-package ssl.factory
+package old.ssl.factory
 
-import ssl.SSLSocketChannel
-import ssl.SSLSocketChannelImpl
+import old.ssl.SSLSocketChannel
+import old.ssl.SSLSocketChannelImpl
 import java.nio.channels.SocketChannel
 import java.util.concurrent.Executor
 import javax.net.ssl.SSLContext

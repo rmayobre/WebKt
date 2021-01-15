@@ -1,10 +1,10 @@
-package ssl
+package old.ssl
 
-import AbstractServerSocketChannelEngine
-import selector.READ_OPERATION
-import selector.ServerSelectorHandler
-import selector.WRITE_OPERATION
-import ssl.factory.SSLSocketChannelFactory
+import old.AbstractServerSocketChannelEngine
+import old.READ_OPERATION
+import operation.handler.ServerOperationsHandler
+import old.WRITE_OPERATION
+import old.ssl.factory.SSLSocketChannelFactory
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.nio.channels.SelectableChannel
@@ -12,7 +12,7 @@ import java.nio.channels.SocketChannel
 import java.util.concurrent.ExecutorService
 
 /**
- * Secure Socket Layer implementation for an AbstractServerSocketChannelEngine.
+ * Secure Socket Layer implementation for an old.AbstractServerSocketChannelEngine.
  */
 abstract class SSLServerSocketChannelEngine(
     address: InetSocketAddress,
@@ -22,7 +22,7 @@ abstract class SSLServerSocketChannelEngine(
 
     protected abstract val sslChannelFactory: SSLSocketChannelFactory
 
-    override val handler: ServerSelectorHandler = object : ServerSelectorHandler {
+    override val handler: ServerOperationsHandler = object : ServerOperationsHandler {
         override fun onChannelAccepted(channel: SocketChannel) {
             val sslChannel = sslChannelFactory.create(channel)
             onSSLHandshake(sslChannel)

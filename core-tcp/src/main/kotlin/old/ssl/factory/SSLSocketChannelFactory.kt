@@ -1,6 +1,6 @@
-package ssl.factory
+package old.ssl.factory
 
-import ssl.SSLSocketChannel
+import old.ssl.SSLSocketChannel
 import java.nio.channels.SocketChannel
 
 interface SSLSocketChannelFactory {

@@ -1,5 +1,6 @@
-package selector
+package old
 
+import operation.handler.ServerOperationsHandler
 import java.io.IOException
 import java.nio.channels.SelectionKey
 import java.nio.channels.Selector
@@ -9,11 +10,11 @@ import java.util.concurrent.ExecutorService
 
 class ServerSelectorRunnable(
     private val service: ExecutorService,
-    private val handler: ServerSelectorHandler,
+    private val handler: ServerOperationsHandler,
     selector: Selector
 ) : SelectorRunnable(selector) {
 
-    override fun onAccept(key: SelectionKey) {
+    override suspend fun onAccept(key: SelectionKey) {
         try {
             val serverChannel = key.channel() as ServerSocketChannel
             serverChannel.accept()?.let { channel: SocketChannel ->
@@ -39,7 +40,7 @@ class ServerSelectorRunnable(
         }
     }
 
-    override fun onRead(key: SelectionKey) {
+    override suspend fun onRead(key: SelectionKey) {
         service.execute {
             try {
                 handler.onReadChannel(
@@ -53,7 +54,7 @@ class ServerSelectorRunnable(
         key.cancel()
     }
 
-    override fun onWrite(key: SelectionKey) {
+    override suspend fun onWrite(key: SelectionKey) {
         service.execute {
             try {
                 handler.onWriteChannel(

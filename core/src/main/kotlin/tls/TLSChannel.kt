@@ -1,42 +1,10 @@
 package tls
 
-import SuspendedByteChannel
 import java.io.IOException
-import java.net.InetAddress
-import java.net.SocketAddress
-import java.nio.channels.SelectableChannel
-import javax.net.ssl.SSLSession
+import java.nio.channels.Channel
 import kotlin.jvm.Throws
 
-interface TLSSocketChannel : SuspendedByteChannel {
-
-    /** Get the native SelectableChannel this SSLSocketChannel runs off. */
-    val channel: SelectableChannel
-
-    /** Channel's SSLSession created from SSLEngine. */
-    val session: SSLSession
-
-    /** Get the socket's InetAddress */
-    val inetAddress: InetAddress
-
-    /** Get the channel's remote address. */
-    val remoteAddress: SocketAddress
-
-    /** Get the channel's remote port. */
-    val remotePort: Int
-
-    /** Get the channel's local address. */
-    val localAddress: SocketAddress
-
-    /** Get the channel's local port. */
-    val localPort: Int
-
-    /**
-     * Bind a local address for the channel.
-     * @return current instance of channel.
-     */
-    fun bind(address: SocketAddress): TLSSocketChannel
-
+interface TLSChannel : Channel { // Should this be a TypeChannel<ByteBuffer> ?
     /**
      * Implements the handshake protocol between two peers, required for the establishment of the SSL/TLS connection.
      * During the handshake, encryption configuration information - such as the list of available cipher suites - will be exchanged

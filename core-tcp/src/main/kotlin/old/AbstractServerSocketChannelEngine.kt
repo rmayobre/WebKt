@@ -1,4 +1,7 @@
-import selector.*
+package old
+
+import operation.*
+import operation.handler.ServerOperationsHandler
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.nio.channels.SelectableChannel
@@ -16,7 +19,7 @@ import java.util.concurrent.TimeUnit
  * @param service The ExecutorServer to launch multi-threaded calls for each Channel operation.
  * @param threadName Name of the Thread that runs the Selector operation calls.
  * @see ServerSelectorRunnable
- * @see ServerSelectorHandler
+ * @see ServerOperationsHandler
  */
 abstract class AbstractServerSocketChannelEngine(
     private val address: InetSocketAddress,
@@ -32,7 +35,7 @@ abstract class AbstractServerSocketChannelEngine(
 
     private lateinit var thread: Thread
 
-    protected abstract val handler: ServerSelectorHandler
+    protected abstract val handler: ServerOperationsHandler
 
     override val isRunning: Boolean
         get() = if (::thread.isInitialized) {
@@ -100,7 +103,7 @@ abstract class AbstractServerSocketChannelEngine(
     /**
      * Register channel back into selector. Only registers channel if channel is open.
      * @throws IOException if channel cannot be registered to selector.
-     * @see ACCEPT_OPERATION
+     * @see AcceptOperation
      * @see CONNECT_OPERATION
      * @see READ_OPERATION
      * @see WRITE_OPERATION

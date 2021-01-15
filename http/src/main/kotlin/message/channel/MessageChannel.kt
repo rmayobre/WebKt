@@ -6,14 +6,14 @@ import message.BadMessageException
 import message.Message
 import message.Request
 import message.Response
-import TypeChannel
+import old.TypeChannel
 import java.io.IOException
 import java.lang.StringBuilder
 import java.nio.ByteBuffer
 import java.nio.channels.ByteChannel
 
 /**
- * An interface for a TypeChannel that handles Message data.
+ * An interface for a old.TypeChannel that handles Message data.
  */
 interface MessageChannel : TypeChannel<Message>
 

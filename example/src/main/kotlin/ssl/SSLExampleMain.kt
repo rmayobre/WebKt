@@ -1,7 +1,7 @@
 package ssl
 
-import ssl.SSLServerSocketChannelEngine
-import ssl.SSLSocketChannel
+import old.ssl.SSLServerSocketChannelEngine
+import old.ssl.SSLSocketChannel
 import java.io.*
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer

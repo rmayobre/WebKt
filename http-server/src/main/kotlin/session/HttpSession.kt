@@ -2,9 +2,6 @@ package session
 
 import message.Message
 import message.channel.MessageChannel
-import TypeChannel
-import java.util.*
-import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLSession
 
 open class HttpSession(
