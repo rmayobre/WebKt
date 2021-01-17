@@ -1,6 +1,6 @@
 package old.ssl
 
-import tls.HandshakeResult
+import channel.tls.HandshakeResult
 import java.io.IOException
 import java.net.InetAddress
 import java.net.SocketAddress

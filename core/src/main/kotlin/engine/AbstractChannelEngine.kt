@@ -1,19 +1,18 @@
 package engine
 
 import kotlinx.coroutines.*
-import operation.Operation
+import engine.operation.Operation
 import java.lang.Runnable
 import java.nio.channels.*
 
 abstract class AbstractChannelEngine(
-    dispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val threadName: String = DEFAULT_THREAD_NAME
+    dispatcher: CoroutineDispatcher = Dispatchers.Default,
+    private val threadName: String = DEFAULT_THREAD_NAME,
+    job: Job = SupervisorJob()
 ): ChannelEngine, Runnable {
 
-    private val supervisor = SupervisorJob()
-
-    protected val coroutineScope: CoroutineScope =
-        CoroutineScope(dispatcher + supervisor)
+    protected val engineScope: CoroutineScope =
+        CoroutineScope(dispatcher + job)
 
     private lateinit var selector: Selector
 
@@ -32,7 +31,7 @@ abstract class AbstractChannelEngine(
         thread.start()
     }
 
-    override fun run() {
+    override fun run() = with(engineScope) {
         while (selector.isOpen) {
             synchronized(selector) {
                 if (selector.selectNow() > 0) {
@@ -40,16 +39,16 @@ abstract class AbstractChannelEngine(
                         if (key.isValid) {
                             when {
                                 // A channel has an incoming connection request.
-                                key.isAcceptable -> coroutineScope.launch { onAccept(key) }
+                                key.isAcceptable -> launch { onAccept(key) }
 
                                 // A channel has able to connect to remote address.
-                                key.isConnectable -> coroutineScope.launch { onConnect(key) }
+                                key.isConnectable -> launch { onConnect(key) }
 
                                 // A channel, registered to the selector, has incoming data.
-                                key.isReadable -> coroutineScope.launch { onRead(key) }
+                                key.isReadable -> launch { onRead(key) }
 
                                 // A channel, registered to the selector, has data to be written.
-                                key.isWritable -> coroutineScope.launch { onWrite(key) }
+                                key.isWritable -> launch { onWrite(key) }
                             }
                         }
                     }
@@ -61,8 +60,10 @@ abstract class AbstractChannelEngine(
     override fun stop() {
         if (isRunning) {
             selector.close()
-            // TODO finish jobs while selector is closed
-//            supervisor.completeExceptionally()
+            engineScope.cancel()
+            selector.keys().forEach { key ->
+                key.channel().close()
+            }
         }
     }
 
@@ -109,6 +110,6 @@ abstract class AbstractChannelEngine(
     }
 
     companion object {
-        private const val DEFAULT_THREAD_NAME = "engine.AbstractChannelEngine-thread"
+        private const val DEFAULT_THREAD_NAME = "AbstractChannelEngine-thread"
     }
 }

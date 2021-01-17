@@ -1,19 +1,19 @@
 package engine
 
 import kotlinx.coroutines.*
-import operation.handler.ClientOperationsHandler
+import engine.operation.handler.ClientOperationsHandler
 import java.nio.channels.SelectionKey
 
 class SocketChannelEngine(
     private val handler: ClientOperationsHandler,
-    dispatcher: CoroutineDispatcher = Dispatchers.IO,
+    dispatcher: CoroutineDispatcher = Dispatchers.Default,
     threadName: String = DEFAULT_THREAD_NAME
 ) : AbstractChannelEngine(dispatcher, threadName) {
 
     constructor(handler: ClientOperationsHandler, threadName: String):
         this(handler, Dispatchers.IO, threadName)
 
-    override suspend fun onConnect(key: SelectionKey): Unit = with(coroutineScope) {
+    override suspend fun onConnect(key: SelectionKey): Unit = with(engineScope) {
         launch(
             CoroutineExceptionHandler { _, error ->
                 launch {
@@ -28,7 +28,7 @@ class SocketChannelEngine(
         }
     }
 
-    override suspend fun onRead(key: SelectionKey): Unit = with(coroutineScope) {
+    override suspend fun onRead(key: SelectionKey): Unit = with(engineScope) {
         launch(
             CoroutineExceptionHandler { _, error ->
                 launch {
@@ -47,7 +47,7 @@ class SocketChannelEngine(
         key.cancel()
     }
 
-    override suspend fun onWrite(key: SelectionKey): Unit = with(coroutineScope) {
+    override suspend fun onWrite(key: SelectionKey): Unit = with(engineScope) {
         launch(
             CoroutineExceptionHandler { _, error ->
                 launch {
@@ -67,6 +67,6 @@ class SocketChannelEngine(
     }
 
     companion object {
-        private const val DEFAULT_THREAD_NAME = "engine.ClientChannelEngine-thread"
+        private const val DEFAULT_THREAD_NAME = "SocketChannelEngine-thread"
     }
 }

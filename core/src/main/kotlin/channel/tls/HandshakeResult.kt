@@ -1,4 +1,4 @@
-package tls
+package channel.tls
 
 sealed class HandshakeResult {
 

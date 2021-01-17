@@ -1,6 +1,6 @@
 package old.ssl
 
-import tls.HandshakeResult
+import channel.tls.HandshakeResult
 
 sealed class HandshakeResult {
 

@@ -32,7 +32,7 @@ const val WRITE_OPERATION = SelectionKey.OP_WRITE
  * # Summary
  * A Runnable implementation for a non-blocking Selector setup. Make use of this class by
  * creating a child class that inherits the SelectorRunnable. Override the functions called
- * during operation events.
+ * during engine.operation events.
  *
  * ## Running the task
  * Create a Thread and pass the runnable within the constructor. Then call [Thread.start] to
@@ -48,7 +48,7 @@ const val WRITE_OPERATION = SelectionKey.OP_WRITE
  * ```
  *
  * ## Registering channels
- * Register a channel with an operation by calling the [register] function.
+ * Register a channel with an engine.operation by calling the [register] function.
  * ```
  * val channel = ServerSocketChannel.open()
  * val runnable = SelectorRunnable(selector)
@@ -57,9 +57,9 @@ const val WRITE_OPERATION = SelectionKey.OP_WRITE
  * runnable.register(channel, ACCEPT_OPERATION)
  * ```
  *
- * ## Overriding operation events
- * By default, operation events result with the SelectionKey being canceled. To change this,
- * create an implementation of SelectorRunnable to override operation events.
+ * ## Overriding engine.operation events
+ * By default, engine.operation events result with the SelectionKey being canceled. To change this,
+ * create an implementation of SelectorRunnable to override engine.operation events.
  *
  * ```
  * val selector = Selector.open()
@@ -121,7 +121,7 @@ open class SelectorRunnable(
      * Register channel back into selector. Only registers channel if channel is open.
      * @param channel SelectableChannel to be registered to Selector.
      * @param operation Operation the Channel will be registered to perform. NOTE, you can register multiple operations at the same time.
-     * @param attachment An attachment to be provided for the channel's next operation.
+     * @param attachment An attachment to be provided for the channel's next engine.operation.
      * @see AcceptOperation
      * @see CONNECT_OPERATION
      * @see READ_OPERATION

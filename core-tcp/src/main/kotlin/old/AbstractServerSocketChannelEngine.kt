@@ -1,7 +1,7 @@
 package old
 
-import operation.*
-import operation.handler.ServerOperationsHandler
+import engine.operation.*
+import engine.operation.handler.ServerOperationsHandler
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.nio.channels.SelectableChannel
@@ -16,8 +16,8 @@ import java.util.concurrent.TimeUnit
  * [Selector] and [SelectableChannel]s by providing a lifecycle influenced event series. Events called
  * are based from the operations declared by the Selector created at runtime.
  * @param address The InetSocketAddress for the ServerSocketChannel to bind to.
- * @param service The ExecutorServer to launch multi-threaded calls for each Channel operation.
- * @param threadName Name of the Thread that runs the Selector operation calls.
+ * @param service The ExecutorServer to launch multi-threaded calls for each Channel engine.operation.
+ * @param threadName Name of the Thread that runs the Selector engine.operation calls.
  * @see ServerSelectorRunnable
  * @see ServerOperationsHandler
  */

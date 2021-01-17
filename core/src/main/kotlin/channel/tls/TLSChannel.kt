@@ -1,4 +1,4 @@
-package tls
+package channel.tls
 
 import java.io.IOException
 import java.nio.channels.Channel

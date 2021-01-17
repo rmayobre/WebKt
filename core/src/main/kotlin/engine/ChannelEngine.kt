@@ -1,6 +1,6 @@
 package engine
 
-import operation.Operation
+import engine.operation.Operation
 import java.io.IOException
 import java.nio.channels.SelectableChannel
 import kotlin.jvm.Throws
@@ -34,7 +34,7 @@ interface ChannelEngine {
      * Register channel back into selector. Only registers channel if channel is open.
      * @param channel SelectableChannel to be registered to Selector.
      * @param operation Operation the Channel will be registered to perform. NOTE, you can register multiple operations at the same time.
-     * @param attachment An attachment to be provided for the channel's next operation.
+     * @param attachment An attachment to be provided for the channel's next engine.operation.
      */
     fun register(channel: SelectableChannel, operation: Operation, attachment: Any? = null)
 }

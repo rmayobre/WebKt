@@ -1,11 +1,12 @@
-package tls
+package channel.tls
 
-import ByteBufferChannel
+import channel.ByteBufferChannel
+import kotlinx.coroutines.*
 import java.io.IOException
+import java.lang.Runnable
 import java.net.InetAddress
 import java.net.SocketAddress
 import java.nio.ByteBuffer
-import java.nio.channels.DatagramChannel
 import java.nio.channels.SocketChannel
 import javax.net.ssl.SSLEngine
 import javax.net.ssl.SSLSession
@@ -14,10 +15,9 @@ import kotlin.math.min
 class SecureSocketChannel(
     val channel: SocketChannel,
     /** SSLEngine used for the Secure-Socket communications. */
-    private val engine: SSLEngine
+    private val engine: SSLEngine,
+    private val dispatcher: CoroutineDispatcher = Dispatchers.Default
 ) : TLSChannel, ByteBufferChannel {
-
-    private lateinit var datagramChannel: DatagramChannel
 
     /**
      * Application data sent from THIS endpoint.
@@ -78,12 +78,7 @@ class SecureSocketChannel(
         !engine.isOutboundDone &&
         !engine.isInboundDone
 
-
-    override suspend fun performHandshake(): HandshakeResult {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun read(buffer: ByteBuffer): Int {
+    override suspend fun read(buffer: ByteBuffer): Int { // Should this read into a flow?
         TODO("Not yet implemented")
     }
 
@@ -91,16 +86,34 @@ class SecureSocketChannel(
         TODO("Not yet implemented")
     }
 
-    @Throws(IOException::class)
-    override fun close() {
-        engine.closeOutbound()
-        try {
-            //performHandshake() TODO implement handshake
-        } catch (ex: Exception) {
-
-        }
-        channel.close()
+    override suspend fun performHandshake(): HandshakeResult {
+        TODO("Not yet implemented")
     }
+
+    private suspend fun wrap() = coroutineScope {
+
+    }
+
+    private suspend fun unwrap() = coroutineScope {
+
+    }
+
+    private suspend fun runDelegatedTasks() = coroutineScope {
+        var task: Runnable?
+        while (engine.delegatedTask.also { task = it } != null) {
+            launch(dispatcher) {
+                task!!.run()
+            }
+        }
+    }
+
+    override fun close() = try {
+        //performHandshake() TODO implement handshake
+        channel.close()
+    } finally {
+        engine.closeOutbound()
+    }
+
 
     override fun toString(): String = channel.socket().let { socket ->
         "SecureSocketChannel: ${hashCode()}\n" +

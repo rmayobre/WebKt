@@ -1,33 +1,31 @@
-package operation.handler
+package engine.operation.handler
 
 import java.nio.channels.SelectableChannel
 import kotlin.jvm.Throws
 
 /**
- * A communication interface for a ServerSelectorRunnable. A ServerSelectorRunnable will communicate
- * with the ServerSelectorHandler based on operations available on selected Channels.
- * @see ServerChannelEngine
+ * A communication interface for a ClientSelectorRunnable. A ClientSelectorRunnable will communicate
+ * with the ClientChannelOperationHandler based on the operations available on selected Channels.
+ * @see ClientChannelEngine
  */
-interface ServerOperationsHandler {
+interface ClientOperationsHandler {
     /**
-     * A new connection was made, as well as a new channel was constructed. Should this channel's connection
-     * be accepted and allow the channel to be read from? If you accept the channel, it is recommended to configure
-     * the channel to the appropriate settings during this function call.
+     * Client Channel is ready to finish connection.
      * @throws Exception when a channel cannot be accept or read from.
      * @return Return true if the engine registers the channel to the selector; false will close the channel
      */
     @Throws(Exception::class)
-    suspend fun onChannelAccepted(channel: SelectableChannel, attachment: Any?)
+    suspend fun onConnect(channel: SelectableChannel)
 
     /**
-     * A channel is ready to be read by the engine's child implementation.
+     * Client channel is ready to be read.
      * @throws Exception when a channel cannot be read from.
      */
     @Throws(Exception::class)
     suspend fun onReadChannel(channel: SelectableChannel, attachment: Any?)
 
     /**
-     * A channel is ready to be written by the engine's child implementation.
+     * Client channel is ready to be written.
      * @throws Exception when a channel cannot be read from.
      */
     @Throws(Exception::class)
