@@ -5,6 +5,7 @@ import java.nio.ByteBuffer
 import java.nio.channels.Channel
 import kotlin.jvm.Throws
 
+@Deprecated("Use SuspendedBufferChannel")
 interface ByteBufferChannel : Channel {
 
 //    /**
