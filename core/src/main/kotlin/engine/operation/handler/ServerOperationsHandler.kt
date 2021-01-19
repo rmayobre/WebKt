@@ -8,7 +8,7 @@ import kotlin.jvm.Throws
  * with the ServerSelectorHandler based on operations available on selected Channels.
  * @see ServerChannelEngine
  */
-interface ServerOperationsHandler {
+interface ServerOperationsHandler { // TODO make this an actor
     /**
      * A new connection was made, as well as a new channel was constructed. Should this channel's connection
      * be accepted and allow the channel to be read from? If you accept the channel, it is recommended to configure

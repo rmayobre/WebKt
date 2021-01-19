@@ -6,7 +6,7 @@ import java.nio.channels.*
 
 
 class ServerSocketChannelEngine(
-    private val handler: ServerOperationsHandler,
+    private val handler: ServerOperationsHandler, // TODO make this an actor
     dispatcher: CoroutineDispatcher = Dispatchers.Default,
     threadName: String = DEFAULT_THREAD_NAME
 ) : AbstractChannelEngine(dispatcher, threadName) {

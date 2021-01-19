@@ -5,7 +5,7 @@ import engine.operation.handler.ClientOperationsHandler
 import java.nio.channels.SelectionKey
 
 class SocketChannelEngine(
-    private val handler: ClientOperationsHandler,
+    private val handler: ClientOperationsHandler, // TODO make this an actor
     dispatcher: CoroutineDispatcher = Dispatchers.Default,
     threadName: String = DEFAULT_THREAD_NAME
 ) : AbstractChannelEngine(dispatcher, threadName) {

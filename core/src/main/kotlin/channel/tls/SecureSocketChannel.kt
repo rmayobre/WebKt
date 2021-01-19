@@ -1,10 +1,10 @@
 package channel.tls
 
-import channel.ByteBufferChannel
 import channel.SelectableChannelWrapper
-import channel.SuspendedBufferChannel
+import channel.SuspendedByteChannel
 import channel.toString
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
 import java.lang.Runnable
 import java.net.InetAddress
 import java.net.SocketAddress
@@ -15,11 +15,11 @@ import javax.net.ssl.SSLSession
 import kotlin.math.min
 
 class SecureSocketChannel(
-    override val channel: SocketChannel,
+    override val channel: SocketChannel, // TODO change to SuspendedSocketChannel
     /** SSLEngine used for the Secure-Socket communications. */
     private val engine: SSLEngine,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default
-) : TLSChannel, SelectableChannelWrapper, SuspendedBufferChannel {
+) : TLSChannel, SelectableChannelWrapper, SuspendedByteChannel {
 
     /**
      * Application data sent from THIS endpoint.
@@ -41,27 +41,26 @@ class SecureSocketChannel(
      */
     private var peerPacketData: ByteBuffer
 
-    /** Channel's SSLSession created from SSLEngine. */
+    /**
+     * Used to lock access to the channel's ByteBuffers.
+     */
+    private val mutex: Mutex = Mutex()
+
     override val session: SSLSession
         get() = engine.session
 
-    /** Get the socket's InetAddress */
     override val inetAddress: InetAddress
         get() = channel.socket().inetAddress
 
-    /** Get the channel's remote address. */
     override val remoteAddress: SocketAddress
         get() = channel.remoteAddress
 
-    /** Get the channel's remote port. */
     override val remotePort: Int
         get() = channel.socket().port
 
-    /** Get the channel's local address. */
     override val localAddress: SocketAddress
         get() = channel.localAddress
 
-    /** Get the channel's local port. */
     override val localPort: Int
         get() = channel.socket().localPort
 

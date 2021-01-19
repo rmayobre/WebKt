@@ -8,7 +8,7 @@ import kotlin.jvm.Throws
  * with the ClientChannelOperationHandler based on the operations available on selected Channels.
  * @see ClientChannelEngine
  */
-interface ClientOperationsHandler {
+interface ClientOperationsHandler { // TODO make this an actor
     /**
      * Client Channel is ready to finish connection.
      * @throws Exception when a channel cannot be accept or read from.

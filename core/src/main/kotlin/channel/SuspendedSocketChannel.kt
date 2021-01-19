@@ -1,23 +1,31 @@
 package channel
 
-import java.io.IOException
+import kotlinx.coroutines.channels.ActorScope
 import java.nio.ByteBuffer
-import kotlin.jvm.Throws
+import java.nio.channels.SocketChannel
+import kotlinx.coroutines.channels.actor
 
-interface SuspendedBufferChannel {
-    /**
-     * A suspended process of reading from a socket connection into a buffer.
-     * @param buffer the buffer where data is read into.
-     * @throws IOException thrown if there is a problem reading from socket.
-     */
-    @Throws(IOException::class)
-    suspend fun read(buffer: ByteBuffer): Int
+class SuspendedSocketChannel(
+    val channel: SocketChannel
+) : SuspendedByteChannel {
 
-    /**
-     * A suspended process of writing data into a socket connection.
-     * @param buffer the data what will be written into the socket.
-     * @throws IOException thrown if there is a problem reading from socket.
-     */
-    @Throws(IOException::class)
-    suspend fun write(buffer: ByteBuffer): Int
+    private val networkActor = actor<SuspendedOperation> {
+
+        val channel = ActorScope
+    }
+
+    override suspend fun read(buffer: ByteBuffer): Int {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun write(buffer: ByteBuffer): Int {
+
+        TODO("Not yet implemented")
+    }
+
+
+    private sealed class SuspendedOperation {
+        inner class Read(buffer: ByteBuffer) : SuspendedOperation()
+        inner class Write(buffer: ByteBuffer) : SuspendedOperation()
+    }
 }
