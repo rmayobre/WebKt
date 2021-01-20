@@ -1,4 +1,4 @@
-package engine.operation.handler
+package engine.deprecated.handler
 
 import java.nio.channels.SelectableChannel
 import kotlin.jvm.Throws
@@ -8,6 +8,7 @@ import kotlin.jvm.Throws
  * with the ClientChannelOperationHandler based on the operations available on selected Channels.
  * @see ClientChannelEngine
  */
+@Deprecated("Make this an actor implementation")
 interface ClientOperationsHandler { // TODO make this an actor
     /**
      * Client Channel is ready to finish connection.

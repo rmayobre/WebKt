@@ -1,7 +1,7 @@
 package old
 
 import engine.operation.*
-import engine.operation.handler.ServerOperationsHandler
+import engine.deprecated.handler.ServerOperationsHandler
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.nio.channels.SelectableChannel

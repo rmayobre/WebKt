@@ -2,7 +2,7 @@ package old.ssl
 
 import old.AbstractServerSocketChannelEngine
 import old.READ_OPERATION
-import engine.operation.handler.ServerOperationsHandler
+import engine.deprecated.handler.ServerOperationsHandler
 import old.WRITE_OPERATION
 import old.ssl.factory.SSLSocketChannelFactory
 import java.io.IOException

@@ -1,12 +1,12 @@
-package engine
+package engine.deprecated
 
 import kotlinx.coroutines.*
-import engine.operation.Operation
 import java.lang.Runnable
 import java.nio.channels.*
 
+@Deprecated("replaced with newering engine designs.")
 abstract class AbstractChannelEngine(
-    dispatcher: CoroutineDispatcher = Dispatchers.Default,
+    dispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val threadName: String = DEFAULT_THREAD_NAME,
     job: Job = SupervisorJob()
 ): ChannelEngine, Runnable {
@@ -31,6 +31,7 @@ abstract class AbstractChannelEngine(
         thread.start()
     }
 
+    // Should I change this to a coroutine job?
     override fun run() = with(engineScope) {
         while (selector.isOpen) {
             synchronized(selector) {
@@ -74,7 +75,7 @@ abstract class AbstractChannelEngine(
     }
 
     /**
-     * An operations event of the engine.AbstractChannelEngine. This means the Selector has provided a SelectionKey that is able to
+     * An operations event of the engine.deprecated.AbstractChannelEngine. This means the Selector has provided a SelectionKey that is able to
      * accept an incoming connection.
      * @param key The SelectionKey providing the SelectableChannel with a new incoming connection.
      */
@@ -83,7 +84,7 @@ abstract class AbstractChannelEngine(
     }
 
     /**
-     * An operations event of the engine.AbstractChannelEngine. This means the Selector has provided a SelectionKey that has
+     * An operations event of the engine.deprecated.AbstractChannelEngine. This means the Selector has provided a SelectionKey that has
      * a channel, ready to finish connection.
      * @param key The SelectionKey providing the SelectableChannel with a new incoming connection.
      */
@@ -92,7 +93,7 @@ abstract class AbstractChannelEngine(
     }
 
     /**
-     * An operations event of the engine.AbstractChannelEngine. This means the Selector has provided a SelectionKey with a channel
+     * An operations event of the engine.deprecated.AbstractChannelEngine. This means the Selector has provided a SelectionKey with a channel
      * that has incoming data being sent from the opposing endpoint.
      * @param key The SelectionKey providing the SelectableChannel with a new incoming connection.
      */
@@ -101,7 +102,7 @@ abstract class AbstractChannelEngine(
     }
 
     /**
-     * An operations event of the engine.AbstractChannelEngine. This means the Selector has provided a SelectionKey that is ready
+     * An operations event of the engine.deprecated.AbstractChannelEngine. This means the Selector has provided a SelectionKey that is ready
      * for it's channel to write data.
      * @param key The SelectionKey providing the SelectableChannel with a new incoming connection.
      */

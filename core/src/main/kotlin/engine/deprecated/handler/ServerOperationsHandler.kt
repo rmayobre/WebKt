@@ -1,4 +1,4 @@
-package engine.operation.handler
+package engine.deprecated.handler
 
 import java.nio.channels.SelectableChannel
 import kotlin.jvm.Throws
@@ -8,6 +8,7 @@ import kotlin.jvm.Throws
  * with the ServerSelectorHandler based on operations available on selected Channels.
  * @see ServerChannelEngine
  */
+@Deprecated("make this an actor implementation")
 interface ServerOperationsHandler { // TODO make this an actor
     /**
      * A new connection was made, as well as a new channel was constructed. Should this channel's connection

@@ -1,6 +1,5 @@
-package engine
+package engine.deprecated
 
-import engine.operation.Operation
 import java.io.IOException
 import java.nio.channels.SelectableChannel
 import kotlin.jvm.Throws
@@ -8,6 +7,7 @@ import kotlin.jvm.Throws
 /**
  * An engine that hosts network operations.
  */
+@Deprecated("Use NetworkChannel Engine")
 interface ChannelEngine {
 
     /**
@@ -20,7 +20,7 @@ interface ChannelEngine {
      * @throws IOException thrown if engine could not open sockets.
      */
     @Throws(IOException::class)
-    fun start()//: Boolean TODO this should return a state of the engine.
+    fun start()//: Boolean TODO this should return a sendChannel.
 
 
     /**

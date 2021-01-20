@@ -1,19 +1,21 @@
-package engine
+package engine.deprecated
 
 import kotlinx.coroutines.*
-import engine.operation.handler.ClientOperationsHandler
-import java.nio.channels.SelectionKey
+import engine.deprecated.handler.ServerOperationsHandler
+import java.nio.channels.*
 
-class SocketChannelEngine(
-    private val handler: ClientOperationsHandler, // TODO make this an actor
+
+@Deprecated("Move logic to an Actor implementation")
+class ServerSocketChannelEngine(
+    private val handler: ServerOperationsHandler, // TODO make this an actor
     dispatcher: CoroutineDispatcher = Dispatchers.Default,
     threadName: String = DEFAULT_THREAD_NAME
 ) : AbstractChannelEngine(dispatcher, threadName) {
 
-    constructor(handler: ClientOperationsHandler, threadName: String):
+    constructor(handler: ServerOperationsHandler, threadName: String):
         this(handler, Dispatchers.IO, threadName)
 
-    override suspend fun onConnect(key: SelectionKey): Unit = with(engineScope) {
+    override suspend fun onAccept(key: SelectionKey): Unit = with(engineScope) {
         launch(
             CoroutineExceptionHandler { _, error ->
                 launch {
@@ -24,7 +26,10 @@ class SocketChannelEngine(
                 }
             }
         ) {
-            handler.onConnect(key.channel())
+            handler.onChannelAccepted(
+                channel = key.channel(),
+                attachment = key.attachment()
+            )
         }
     }
 
@@ -67,6 +72,6 @@ class SocketChannelEngine(
     }
 
     companion object {
-        private const val DEFAULT_THREAD_NAME = "SocketChannelEngine-thread"
+        private const val DEFAULT_THREAD_NAME = "ServerSocketChannelEngine-thread"
     }
 }
