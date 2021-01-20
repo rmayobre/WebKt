@@ -1,5 +1,6 @@
 package channel
 
+import kotlinx.coroutines.flow.Flow
 import java.io.IOException
 import java.nio.ByteBuffer
 import kotlin.jvm.Throws
@@ -13,6 +14,8 @@ interface SuspendedByteChannel {
     @Throws(IOException::class)
     suspend fun read(buffer: ByteBuffer): Int
 
+    suspend fun readFlow(buffer: ByteBuffer): Flow<Int>
+
     /**
      * A suspended process of writing data into a socket connection.
      * @param buffer the data what will be written into the socket.
@@ -20,4 +23,6 @@ interface SuspendedByteChannel {
      */
     @Throws(IOException::class)
     suspend fun write(buffer: ByteBuffer): Int
+
+//    suspend fun writeFlow(flow: Flow<>)
 }

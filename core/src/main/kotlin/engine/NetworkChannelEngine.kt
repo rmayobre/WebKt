@@ -1,7 +1,7 @@
 package engine
 
-import engine.operation.OperationMessage
-import kotlinx.coroutines.channels.SendChannel
+import NetworkApplication
+import engine.operation.OperationsChannel
 import java.io.IOException
 import kotlin.jvm.Throws
 
@@ -15,7 +15,7 @@ interface NetworkChannelEngine  {
     /**
      * Start your engine.
      */
-    fun start(vararg message: OperationMessage): SendChannel<OperationMessage>
+    fun NetworkApplication.start(/* Create some kind of interface to communicate with. */): OperationsChannel
 
 
     /**

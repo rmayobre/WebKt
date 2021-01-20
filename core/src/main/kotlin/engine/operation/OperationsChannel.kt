@@ -1,21 +1,24 @@
 package engine.operation
 
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.SendChannel
+import java.nio.channels.SelectableChannel
 
 
 // Maybe make this a coroutine?
 class OperationsChannel(
-    channel: Channel<OperationMessage>
-) : Channel<OperationMessage> by channel {
-// TODO iterate the channel to keep the coroutine alive!
+    private val channel: SendChannel<OperationMessage>
+) {
 
-    constructor(
-        capacity: Int = Channel.RENDEZVOUS,
-        onBufferOverflow: BufferOverflow = BufferOverflow.SUSPEND,
-        onUndeliveredElement: ((OperationMessage) -> Unit)? = null
-    ) : this(
-        channel = Channel(capacity, onBufferOverflow, onUndeliveredElement)
-    )
+    suspend fun accept(selectableChannel: SelectableChannel, attachment: Any? = null) =
+        channel.send(OperationMessage.Accept(selectableChannel, attachment))
+
+    suspend fun connect(selectableChannel: SelectableChannel, attachment: Any? = null) =
+        channel.send(OperationMessage.Connect(selectableChannel, attachment))
+
+    suspend fun read(selectableChannel: SelectableChannel, attachment: Any? = null) =
+        channel.send(OperationMessage.Read(selectableChannel, attachment))
+
+    suspend fun write(selectableChannel: SelectableChannel, attachment: Any? = null) =
+        channel.send(OperationMessage.Write(selectableChannel, attachment))
 
 }
