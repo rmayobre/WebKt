@@ -1,18 +1,29 @@
 package channel
 
-import kotlinx.coroutines.channels.ActorScope
 import java.nio.ByteBuffer
 import java.nio.channels.SocketChannel
-import kotlinx.coroutines.channels.actor
+import java.net.InetAddress
+import java.net.SocketAddress
+import java.nio.channels.Channel
 
-class SuspendedSocketChannel(
-    val channel: SocketChannel
-) : SuspendedByteChannel {
+open class SuspendedSocketChannel(
+    override val channel: SocketChannel
+) : SuspendedByteChannel, NetworkChannel<SocketChannel>, Channel by channel {
 
-    private val networkActor = actor<SuspendedOperation> {
+    override val inetAddress: InetAddress
+        get() = channel.socket().inetAddress
 
-        val channel = ActorScope
-    }
+    override val remoteAddress: SocketAddress
+        get() = channel.remoteAddress
+
+    override val remotePort: Int
+        get() = channel.socket().port
+
+    override val localAddress: SocketAddress
+        get() = channel.localAddress
+
+    override val localPort: Int
+        get() = channel.socket().localPort
 
     override suspend fun read(buffer: ByteBuffer): Int {
         TODO("Not yet implemented")
@@ -23,9 +34,11 @@ class SuspendedSocketChannel(
         TODO("Not yet implemented")
     }
 
-
-    private sealed class SuspendedOperation {
-        inner class Read(buffer: ByteBuffer) : SuspendedOperation()
-        inner class Write(buffer: ByteBuffer) : SuspendedOperation()
-    }
+    override fun toString(): String =
+        "SuspendedSocketChannel: ${hashCode()}\n" +
+            "Channel Class:     ${channel.javaClass}\n" +
+            "Remote Address:    $remoteAddress\n" +
+            "Remote Port:       $remotePort\n" +
+            "Local Address:     $localAddress\n" +
+            "Local Port:        $localPort\n"
 }

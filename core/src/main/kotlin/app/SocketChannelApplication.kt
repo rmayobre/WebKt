@@ -1,10 +1,11 @@
+package app
+
 import kotlinx.coroutines.*
 import java.nio.channels.SelectableChannel
 import java.nio.channels.SelectionKey
-import java.nio.channels.ServerSocketChannel
 import java.nio.channels.SocketChannel
 
-abstract class ServerSocketChannelApplication(
+abstract class SocketChannelApplication(
     dispatcher: CoroutineDispatcher = Dispatchers.IO
 ): NetworkApplication {
 
@@ -20,10 +21,11 @@ abstract class ServerSocketChannelApplication(
 
         // What operation is the key ready for?
         when {
+
             //
             // A channel has able to connect to remote address.
             //
-            key.isAcceptable ->
+            key.isConnectable ->
                 launch(
                     CoroutineExceptionHandler { _, error ->
                         launch {
@@ -34,8 +36,8 @@ abstract class ServerSocketChannelApplication(
                         }
                     }
                 ) {
-                    onAccept(
-                        channel = key.channel() as ServerSocketChannel,
+                    onConnect(
+                        channel = key.channel() as SocketChannel,
                         attachment = key.attachment()
                     )
                 }
@@ -83,11 +85,11 @@ abstract class ServerSocketChannelApplication(
     }
 
     /**
-     * A lifecycle event of the SelectorEngine. This means the Selector has provided a SelectionKey that is able to
-     * accept an incoming connection.
+     * An operations event of the engine.deprecated.AbstractChannelEngine. This means the Selector has provided a SelectionKey that has
+     * a channel, ready to finish connection.
      * @param key The SelectionKey providing the SelectableChannel with a new incoming connection.
      */
-    protected abstract suspend fun onAccept(channel: ServerSocketChannel, attachment: Any?)
+    protected abstract suspend fun onConnect(channel: SocketChannel, attachment: Any?)
 
     /**
      * An operations event of the engine.deprecated.AbstractChannelEngine. This means the Selector has provided a SelectionKey with a channel

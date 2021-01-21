@@ -5,7 +5,7 @@ import java.nio.channels.SelectionKey
 /**
  * Available operations to register a SelectableChannel to a SelectorRunnable.
  */
-@Deprecated("Replaced with sealed class")
+@Deprecated("remove")
 enum class Operation(val flag: Int) {
     /**
      * Register a SelectableChannel to accept incoming connection requests.

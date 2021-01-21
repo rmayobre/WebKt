@@ -2,16 +2,14 @@ package channel
 
 import java.net.InetAddress
 import java.net.SocketAddress
+import java.nio.channels.Channel
 import java.nio.channels.SelectableChannel
 import javax.net.ssl.SSLSession
 
-interface SelectableChannelWrapper {
+interface NetworkChannel<T : SelectableChannel> {
 
     /** The channel being wrapped. */
-    val channel: SelectableChannel
-
-    /** Channel's SSLSession created from SSLEngine. */
-    val session: SSLSession
+    val channel: T
 
     /** Get the socket's InetAddress */
     val inetAddress: InetAddress

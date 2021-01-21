@@ -2,9 +2,14 @@ package channel.tls
 
 import java.io.IOException
 import java.nio.channels.Channel
+import javax.net.ssl.SSLSession
 import kotlin.jvm.Throws
 
-interface TLSChannel : Channel { // Should this be a TypeChannel<ByteBuffer> ?
+interface TLSChannel { // Should this be a TypeChannel<ByteBuffer> ?
+
+    /** Channel's SSLSession created from SSLEngine. */
+    val session: SSLSession
+
     /**
      * Implements the handshake protocol between two peers, required for the establishment of the SSL/TLS connection.
      * During the handshake, encryption configuration information - such as the list of available cipher suites - will be exchanged
@@ -33,6 +38,5 @@ interface TLSChannel : Channel { // Should this be a TypeChannel<ByteBuffer> ?
      * @return True if the connection handshake was successful or false if an error occurred.
      * @throws IOException if an error occurs during read/write to the socket channel.
      */
-    @Throws(IOException::class)
     suspend fun performHandshake(): HandshakeResult
 }

@@ -1,3 +1,5 @@
+package app
+
 import kotlinx.coroutines.CoroutineScope
 import java.nio.channels.SelectionKey
 

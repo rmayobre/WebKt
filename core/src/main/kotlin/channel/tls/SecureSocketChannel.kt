@@ -1,68 +1,42 @@
 package channel.tls
 
-import channel.SelectableChannelWrapper
-import channel.SuspendedByteChannel
+import channel.SuspendedSocketChannel
 import channel.toString
 import kotlinx.coroutines.*
-import kotlinx.coroutines.sync.Mutex
 import java.lang.Runnable
-import java.net.InetAddress
-import java.net.SocketAddress
 import java.nio.ByteBuffer
 import java.nio.channels.SocketChannel
 import javax.net.ssl.SSLEngine
 import javax.net.ssl.SSLSession
 import kotlin.math.min
 
+/**
+ * @param channel
+ * @param engine the required SSLEngine
+ * @param dispatcher the dispatcher to run delegated tasks for the SSL process.
+ */
 class SecureSocketChannel(
-    override val channel: SocketChannel, // TODO change to SuspendedSocketChannel
-    /** SSLEngine used for the Secure-Socket communications. */
+    channel: SocketChannel,
     private val engine: SSLEngine,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default
-) : TLSChannel, SelectableChannelWrapper, SuspendedByteChannel {
+) : SuspendedSocketChannel(channel), TLSChannel {
 
-    /**
-     * Application data sent from THIS endpoint.
-     */
-    private var applicationData: ByteBuffer
-
-    /**
-     * Application data received from REMOTE endpoint.
-     */
-    private var peerApplicationData: ByteBuffer
-
-    /**
-     * Encrypted data sent from THIS endpoint.
-     */
+    /** Encrypted data sent from THIS endpoint. */
     private var packetData: ByteBuffer
 
-    /**
-     * Encrypted data received from REMOTE endpoint.
-     */
+    /** Application data sent from THIS endpoint. */
+    private var applicationData: ByteBuffer
+
+    /** Encrypted data received from REMOTE endpoint.*/
     private var peerPacketData: ByteBuffer
 
-    /**
-     * Used to lock access to the channel's ByteBuffers.
-     */
-    private val mutex: Mutex = Mutex()
+    /** Application data received from REMOTE endpoint. */
+    private var peerApplicationData: ByteBuffer
 
     override val session: SSLSession
         get() = engine.session
 
-    override val inetAddress: InetAddress
-        get() = channel.socket().inetAddress
-
-    override val remoteAddress: SocketAddress
-        get() = channel.remoteAddress
-
-    override val remotePort: Int
-        get() = channel.socket().port
-
-    override val localAddress: SocketAddress
-        get() = channel.localAddress
-
-    override val localPort: Int
-        get() = channel.socket().localPort
+    constructor(engine: SSLEngine): this(SocketChannel.open(), engine)
 
     init {
         engine.beginHandshake()
@@ -75,19 +49,23 @@ class SecureSocketChannel(
         peerPacketData = ByteBuffer.allocate(session.packetBufferSize)
     }
 
-    override fun isOpen(): Boolean = channel.isOpen &&
+    override fun isOpen(): Boolean =
+        channel.isOpen &&
         !engine.isOutboundDone &&
         !engine.isInboundDone
 
-    override suspend fun read(buffer: ByteBuffer): Int { // Should this read into a flow?
+
+    override suspend fun read(buffer: ByteBuffer): Int = coroutineScope {
+        super.read(buffer)
         TODO("Not yet implemented")
     }
 
-    override suspend fun write(buffer: ByteBuffer): Int {
+    override suspend fun write(buffer: ByteBuffer): Int = coroutineScope {
+        super.write(buffer)
         TODO("Not yet implemented")
     }
 
-    override suspend fun performHandshake(): HandshakeResult {
+    override suspend fun performHandshake(): HandshakeResult = coroutineScope {
         TODO("Not yet implemented")
     }
 
@@ -99,15 +77,6 @@ class SecureSocketChannel(
 
     }
 
-    private suspend fun runDelegatedTasks() = coroutineScope {
-        var task: Runnable?
-        while (engine.delegatedTask.also { task = it } != null) {
-            launch(dispatcher) {
-                task!!.run()
-            }
-        }
-    }
-
     override fun close() = try {
         //performHandshake() TODO implement handshake
         channel.close()
@@ -115,10 +84,21 @@ class SecureSocketChannel(
         engine.closeOutbound()
     }
 
-    override fun toString(): String =
-        toString(engine)
+    override fun toString(): String = toString(engine)
 
     companion object {
+
+        private suspend fun SSLEngine.runDelegatedTasks(
+            dispatcher: CoroutineDispatcher
+        ) = coroutineScope {
+            var task: Runnable?
+            while (delegatedTask.also { task = it } != null) {
+                launch(dispatcher) {
+                    task!!.run()
+                }
+            }
+        }
+
 
         /**
          * Compares `sessionProposedCapacity` with buffer's capacity. If buffer's capacity is smaller,

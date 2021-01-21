@@ -1,8 +1,10 @@
 package engine
 
-import NetworkApplication
+import app.NetworkApplication
 import engine.operation.OperationsChannel
 import java.io.IOException
+import java.nio.channels.SelectableChannel
+import java.nio.channels.Selector
 import kotlin.jvm.Throws
 
 interface NetworkChannelEngine  {
