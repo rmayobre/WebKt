@@ -1,7 +1,6 @@
 package engine
 
 import channel.NetworkChannel
-import engine.attachment.Attachment
 import java.nio.channels.SelectableChannel
 import java.nio.channels.SelectionKey
 import java.nio.channels.Selector

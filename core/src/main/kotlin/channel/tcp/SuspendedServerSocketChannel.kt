@@ -1,7 +1,6 @@
 package channel.tcp
 
 import channel.NetworkChannel
-import channel.tls.SecureSocketChannel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import java.io.IOException

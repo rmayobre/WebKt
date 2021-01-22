@@ -2,6 +2,8 @@ package channel.tcp
 
 import channel.ClientNetworkChannel
 import channel.SuspendedByteChannel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.net.InetAddress
@@ -86,13 +88,30 @@ open class SuspendedSocketChannel(
         channel.connect(remote)
     }
 
-    override suspend fun read(buffer: ByteBuffer): Int {
-        TODO("Not yet implemented")
+    @Suppress("BlockingMethodInNonBlockingContext")
+    override suspend fun read(buffer: ByteBuffer): Int = coroutineScope {
+        var read = 0
+        var prev = 0
+        launch {
+            while(buffer.hasRemaining() && prev != -1) {
+                prev = channel.read(buffer)
+                read += prev
+            }
+        }.join() // wait for this job to finish.
+        return@coroutineScope read
     }
 
-    override suspend fun write(buffer: ByteBuffer): Int {
-
-        TODO("Not yet implemented")
+    @Suppress("BlockingMethodInNonBlockingContext")
+    override suspend fun write(buffer: ByteBuffer): Int = coroutineScope {
+        var written = 0
+        var prev = 0
+        launch {
+            while(buffer.hasRemaining() && prev != -1) {
+                prev = channel.write(buffer)
+                written += prev
+            }
+        }.join() // wait for this job to finish.
+        return@coroutineScope written
     }
 
     override fun toString(): String =

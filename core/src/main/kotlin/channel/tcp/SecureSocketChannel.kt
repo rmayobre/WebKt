@@ -1,6 +1,7 @@
-package channel.tls
+package channel.tcp
 
-import channel.tcp.SuspendedSocketChannel
+import channel.tls.HandshakeResult
+import channel.tls.TLSChannel
 import channel.toString
 import kotlinx.coroutines.*
 import java.lang.Runnable

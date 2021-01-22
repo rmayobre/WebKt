@@ -1,11 +1,9 @@
 package channel.tls
 
 import java.io.IOException
-import java.nio.channels.Channel
 import javax.net.ssl.SSLSession
-import kotlin.jvm.Throws
 
-interface TLSChannel { // Should this be a TypeChannel<ByteBuffer> ?
+interface TLSChannel {
 
     /** Channel's SSLSession created from SSLEngine. */
     val session: SSLSession

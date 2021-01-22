@@ -1,14 +1,14 @@
 package app
 
+import channel.tcp.SuspendedServerSocketChannel
 import channel.tcp.SuspendedSocketChannel
 import engine.Attachment
 import engine.operation.OperationsChannel
 import engine.toTypeOf
 import kotlinx.coroutines.*
 import java.nio.channels.SelectionKey
-import java.nio.channels.ServerSocketChannel
 
-abstract class ServerSocketChannelApplication(
+abstract class SuspendedServerApplication(
     dispatcher: CoroutineDispatcher = Dispatchers.IO
 ): NetworkApplication {
 
@@ -27,22 +27,17 @@ abstract class ServerSocketChannelApplication(
             //
             // A channel has able to connect to remote address.
             //
-            key.isAcceptable ->
+            key.isAcceptable ->(key.attachment() as? Attachment<*>)?.toTypeOf<SuspendedServerSocketChannel> { channel, attachment ->
                 launch(
                     CoroutineExceptionHandler { _, error ->
                         launch {
-                            onException(
-                                channel = key.channel() as ServerSocketChannel,
-                                attachment = key.attachment(),
-                                error)
+                            onException(channel, attachment, error)
                         }
                     }
                 ) {
-                    onAccept(
-                        channel = key.channel() as ServerSocketChannel,
-                        attachment = key.attachment()
-                    )
+                    onAccept(channel, attachment)
                 }
+            }
 
             //
             // A channel, registered to the selector, has incoming data.
@@ -83,7 +78,7 @@ abstract class ServerSocketChannelApplication(
      *                   you must attach it through the OperationChannel.
      * @see OperationsChannel
      */
-    protected abstract suspend fun onAccept(channel: ServerSocketChannel, attachment: Any?)
+    protected abstract suspend fun onAccept(channel: SuspendedServerSocketChannel, attachment: Any?)
 
     /**
      * An operations event of the SuspendedSocketChannel. The Channel is ready to be written.
@@ -109,7 +104,7 @@ abstract class ServerSocketChannelApplication(
      * @param channel The channel being used while the exception occurred.
      * @param attachment a nullable attachment provided with the SelectableChannel
      */
-    protected abstract suspend fun onException(channel: ServerSocketChannel, attachment: Any?, error: Throwable)
+    protected abstract suspend fun onException(channel: SuspendedServerSocketChannel, attachment: Any?, error: Throwable)
 
     /**
      * Reports an exception occurred while processing a channel.
