@@ -14,15 +14,14 @@ interface NetworkChannel<T : SelectableChannel> {
     /** Get the socket's InetAddress */
     val inetAddress: InetAddress
 
-    /** Get the channel's remote address. */
-    val remoteAddress: SocketAddress
-
-    /** Get the channel's remote port. */
-    val remotePort: Int
-
     /** Get the channel's local address. */
     val localAddress: SocketAddress
 
     /** Get the channel's local port. */
     val localPort: Int
+
+    /**
+     * Binds the channel to the local address provided.
+     */
+    fun bind(local: SocketAddress)
 }

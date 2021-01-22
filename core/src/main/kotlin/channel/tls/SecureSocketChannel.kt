@@ -1,6 +1,6 @@
 package channel.tls
 
-import channel.SuspendedSocketChannel
+import channel.tcp.SuspendedSocketChannel
 import channel.toString
 import kotlinx.coroutines.*
 import java.lang.Runnable

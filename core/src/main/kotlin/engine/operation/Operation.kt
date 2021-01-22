@@ -1,7 +1,6 @@
 package engine.operation
 
 import channel.NetworkChannel
-import java.nio.channels.Channel
 
 sealed class Operation<T : NetworkChannel<*>>(
     val channel: T,

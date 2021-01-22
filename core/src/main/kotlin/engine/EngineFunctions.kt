@@ -7,6 +7,26 @@ import java.nio.channels.SelectionKey
 import java.nio.channels.Selector
 
 /**
+ * Registers a NetworkChannel to the Selector. Registry process works by registering
+ * the NetworkChannel's SelectableChannel with an Attachment class that wraps the
+ * NetworkChannel and the provided Attachment. To get the NetworkChannel, during a
+ * Selector's select (select, selectNow, etc), the NetworkChannel will be provided
+ * within the [SelectionKey.attachment]
+ */
+fun Selector.register(
+    networkChannel: NetworkChannel<*>,
+    operationFlag: Int,
+    attachment: Any? = null
+) = register(
+    channel = networkChannel.channel,
+    operation = operationFlag,
+    attachment = Attachment(
+        channel = networkChannel,
+        storage = attachment
+    )
+)
+
+/**
  * Register channel back into selector. Only registers channel if channel is open.
  * @param channel SelectableChannel to be registered to Selector.
  * @param operation Operation the Channel will be registered to perform. NOTE, you can register multiple operations at the same time.
@@ -21,23 +41,3 @@ fun Selector.register(
         channel.register(this, operation, attachment)
     }
 }
-
-/**
- * Registers a NetworkChannel to the Selector. Registry process works by registering
- * the NetworkChannel's SelectableChannel with an Attachment class that wraps the
- * NetworkChannel and the provided Attachment. To get the NetworkChannel, during a
- * Selector's select (select, selectNow, etc), the NetworkChannel will be provided
- * within the [SelectionKey.attachment]
- */
-fun Selector.register(
-    channel: NetworkChannel<*>,
-    operation: Int,
-    attachment: Any? = null
-) = register(
-    channel = channel.channel,
-    operation = operation,
-    attachment = Attachment(
-        channel,
-        attachment
-    )
-)
