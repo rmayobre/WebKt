@@ -37,8 +37,6 @@ class SecureSocketChannel(
     override val session: SSLSession
         get() = engine.session
 
-    constructor(engine: SSLEngine): this(SocketChannel.open(), engine)
-
     init {
         engine.beginHandshake()
         // Initialize buffers for decrypted data.

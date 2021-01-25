@@ -48,7 +48,7 @@ abstract class SSLServerSocketChannelEngine(
     }
 
     /**
-     * Register channel into Selector as a read engine.operation. Only registers channel if channel is open.
+     * Register channel into Selector as a read operation. Only registers channel if channel is open.
      * @throws IOException if channel cannot be registered to selector.
      * @see register
      */
@@ -57,7 +57,7 @@ abstract class SSLServerSocketChannelEngine(
         register(channel.channel, READ_OPERATION, channel)
 
     /**
-     * Register channel into Selector as a read engine.operation. Only registers channel if channel is open.
+     * Register channel into Selector as a read operation. Only registers channel if channel is open.
      * @throws IOException if channel cannot be registered to selector.
      * @see register
      */

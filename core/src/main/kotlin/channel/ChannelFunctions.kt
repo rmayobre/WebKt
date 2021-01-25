@@ -5,7 +5,7 @@ import kotlinx.coroutines.coroutineScope
 import java.nio.ByteBuffer
 import javax.net.ssl.SSLEngine
 
-internal fun TLSChannel.toString(engine: SSLEngine) = this.toString() +
+internal fun TLSChannel.toString(engine: SSLEngine) =
         "SSL Session:       $session" +
         "Protocol:          ${session.protocol}\n" +
         "Cipher Suit:       ${session.cipherSuite}\n" +

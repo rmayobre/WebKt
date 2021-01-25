@@ -2,8 +2,8 @@ package engine
 
 import app.NetworkApplication
 import channel.NetworkChannel
-import engine.operation.Operation
-import engine.operation.OperationsChannel
+import operation.Operation
+import operation.OperationsChannel
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.channels.actor

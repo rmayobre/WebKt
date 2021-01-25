@@ -29,7 +29,7 @@ fun Selector.register(
  * Register channel back into selector. Only registers channel if channel is open.
  * @param channel SelectableChannel to be registered to Selector.
  * @param operation Operation the Channel will be registered to perform. NOTE, you can register multiple operations at the same time.
- * @param attachment An attachment to be provided for the channel's next engine.operation.
+ * @param attachment An attachment to be provided for the channel's next operation.
  */
 fun Selector.register(
     channel: SelectableChannel,

@@ -3,7 +3,7 @@ package app
 import channel.tcp.SuspendedServerSocketChannel
 import channel.tcp.SuspendedSocketChannel
 import engine.Attachment
-import engine.operation.OperationsChannel
+import operation.OperationsChannel
 import engine.toTypeOf
 import kotlinx.coroutines.*
 import java.nio.channels.SelectionKey
@@ -17,6 +17,7 @@ abstract class SuspendedServerApplication(
     override val appScope: CoroutineScope =
         CoroutineScope(supervisor + dispatcher)
 
+    // TODO rework error handling. Need to make sure exceptions don't kill all jobs.
     override fun onValidKey(key: SelectionKey): Unit = with(appScope) {
         // Remove key from selector to prevent
         // the key from being processed again.
