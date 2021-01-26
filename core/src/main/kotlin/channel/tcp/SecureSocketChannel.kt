@@ -5,11 +5,11 @@ import channel.tls.TLSChannel
 import channel.toString
 import kotlinx.coroutines.*
 import java.lang.Runnable
+import java.net.SocketAddress
 import java.nio.ByteBuffer
 import java.nio.channels.SocketChannel
 import javax.net.ssl.SSLEngine
 import javax.net.ssl.SSLSession
-import kotlin.math.min
 
 /**
  * @param channel
@@ -38,7 +38,6 @@ class SecureSocketChannel(
         get() = engine.session
 
     init {
-        engine.beginHandshake()
         // Initialize buffers for decrypted data.
         applicationData = ByteBuffer.allocate(session.applicationBufferSize)
         peerApplicationData = ByteBuffer.allocate(session.applicationBufferSize)
@@ -65,6 +64,8 @@ class SecureSocketChannel(
     }
 
     override suspend fun performHandshake(): HandshakeResult = coroutineScope {
+
+
         TODO("Not yet implemented")
     }
 
@@ -98,38 +99,35 @@ class SecureSocketChannel(
             }
         }
 
+        fun open(
+            engine: SSLEngine,
+            dispatcher: CoroutineDispatcher = Dispatchers.Default
+        ): SecureSocketChannel = open(
+            channel = SocketChannel.open(),
+            engine, dispatcher
+        )
 
-        /**
-         * Compares `sessionProposedCapacity` with buffer's capacity. If buffer's capacity is smaller,
-         * returns a buffer with the proposed capacity. If it's equal or larger, returns a buffer
-         * with capacity twice the size of the initial one.
-         *
-         * @param this - the buffer to be enlarged.
-         * @param size - the minimum size of the new buffer, proposed by [SSLSession].
-         * @return A new buffer with a larger allocated capacity.
-         */
-        private fun ByteBuffer.increaseBufferSizeTo(size: Int): ByteBuffer =
-            if (size > capacity()) {
-                ByteBuffer.allocate(size)
-            } else {
-                ByteBuffer.allocate(capacity() * 2)
-            }
+        fun open(
+            remote: SocketAddress,
+            engine: SSLEngine,
+            dispatcher: CoroutineDispatcher = Dispatchers.Default
+        ): SecureSocketChannel = open(
+            channel = SocketChannel.open(remote),
+            engine, dispatcher
+        )
 
-
-        /**
-         * Copy bytes from "this" ByteBuffer to the designated "buffer" ByteBuffer.
-         * @param buffer The designated buffer for all bytes to move to.
-         * @return number of bytes copied to the other buffer.
-         */
-        private fun ByteBuffer.copyBytesTo(buffer: ByteBuffer): Int =
-            if (remaining() > buffer.remaining()) {
-                val limit = min(remaining(), buffer.remaining())
-                limit(limit)
-                buffer.put(this)
-                limit
-            } else {
-                buffer.put(this)
-                remaining()
-            }
+        fun open(
+            channel: SocketChannel,
+            engine: SSLEngine,
+            dispatcher: CoroutineDispatcher = Dispatchers.Default
+        ): SecureSocketChannel = SecureSocketChannel(
+            channel = channel.apply {
+                configureBlocking(false)
+            },
+            engine = engine.apply {
+                beginHandshake()
+            },
+            dispatcher
+        )
     }
 }

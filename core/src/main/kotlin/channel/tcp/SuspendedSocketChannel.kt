@@ -80,11 +80,7 @@ open class SuspendedSocketChannel(
          */
         @Throws(IOException::class)
         fun open(): SuspendedSocketChannel =
-            SuspendedSocketChannel(
-                channel = SocketChannel.open().apply {
-                    configureBlocking(false)
-                }
-            )
+            open(SocketChannel.open())
 
         /**
          * Constructs a SuspendedSocketChannel and connect to a remote address.
@@ -120,8 +116,11 @@ open class SuspendedSocketChannel(
             IOException::class
         )
         fun open(remote: SocketAddress): SuspendedSocketChannel =
+            open(SocketChannel.open(remote))
+
+        fun open(channel: SocketChannel): SuspendedSocketChannel =
             SuspendedSocketChannel(
-                channel = SocketChannel.open(remote).apply {
+                channel = channel.apply {
                     configureBlocking(false)
                 }
             )
