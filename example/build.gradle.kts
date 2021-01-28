@@ -12,6 +12,6 @@ repositories {
 
 dependencies {
     implementation(Deps.kotlin)
-    implementation(project(":core-tcp"))
+    implementation(project(":core"))
     implementation(project(":http-server"))
 }

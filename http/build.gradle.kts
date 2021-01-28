@@ -11,6 +11,6 @@ repositories {
 }
 
 dependencies {
-    api(project(":core-tcp"))
+    api(project(":core"))
     implementation(Deps.kotlin)
 }
