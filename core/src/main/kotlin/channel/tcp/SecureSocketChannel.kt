@@ -4,22 +4,27 @@ import channel.tls.HandshakeResult
 import channel.tls.TLSChannel
 import channel.toString
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.SendChannel
+import kotlinx.coroutines.channels.actor
 import java.lang.Runnable
 import java.net.SocketAddress
 import java.nio.ByteBuffer
 import java.nio.channels.SocketChannel
 import javax.net.ssl.SSLEngine
 import javax.net.ssl.SSLSession
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
 
 /**
  * @param channel
  * @param engine the required SSLEngine
- * @param dispatcher the dispatcher to run delegated tasks for the SSL process.
+ * @param scope this is a scope for running background tasks. It is not recommended to provided a CoroutineScope for IO operations.
  */
 class SecureSocketChannel(
     channel: SocketChannel,
     private val engine: SSLEngine,
-    private val dispatcher: CoroutineDispatcher = Dispatchers.Default
+    private val scope: CoroutineScope
 ) : SuspendedSocketChannel(channel), TLSChannel {
 
     /** Encrypted data sent from THIS endpoint. */
@@ -33,6 +38,8 @@ class SecureSocketChannel(
 
     /** Application data received from REMOTE endpoint. */
     private var peerApplicationData: ByteBuffer
+
+    private lateinit var deferredOperationsChannel: SendChannel<Job>
 
     override val session: SSLSession
         get() = engine.session
@@ -52,21 +59,57 @@ class SecureSocketChannel(
         !engine.isOutboundDone &&
         !engine.isInboundDone
 
-
     override suspend fun read(buffer: ByteBuffer): Int = coroutineScope {
-        super.read(buffer)
-        TODO("Not yet implemented")
+        suspendCoroutine { continuation ->
+            launch {
+                deferredOperationsChannel.send(
+                    element = launch(start = CoroutineStart.LAZY) {
+                        continuation.resumeWithException(TODO("Finish logic for read"))
+                    }
+                )
+            }
+        }
     }
 
     override suspend fun write(buffer: ByteBuffer): Int = coroutineScope {
-        super.write(buffer)
-        TODO("Not yet implemented")
+        suspendCoroutine { continuation ->
+            launch {
+                deferredOperationsChannel.send(
+                    element = launch(start = CoroutineStart.LAZY) {
+                        continuation.resumeWithException(TODO("Finish logic for write"))
+                    }
+                )
+            }
+        }
     }
 
-    override suspend fun performHandshake(): HandshakeResult = coroutineScope {
+    @ObsoleteCoroutinesApi
+    @ExperimentalCoroutinesApi
+    override suspend fun performHandshake(): HandshakeResult {
+        if (deferredOperationsChannel.isClosedForSend) {
+            deferredOperationsChannel = scope.actor {
+                for (job in this.channel) {
+                    job.join()
+                }
+            }
+        }
+        return coroutineScope {
+            suspendCoroutine { continuation ->
+                launch {
+                    deferredOperationsChannel.send(
+                        element = launch(start = CoroutineStart.LAZY) {
+                            continuation.resumeWithException(TODO("Finish logic for handshake"))
+                        }
+                    )
+                }
+            }
 
-
-        TODO("Not yet implemented")
+//            val handshake = async<> {
+//                TODO("Write handshake process.")
+//            }
+//            deferredOperationsChannel.send(handshake)
+//            return handshake.await()
+        }
     }
 
     private suspend fun wrap() = coroutineScope {
@@ -79,6 +122,7 @@ class SecureSocketChannel(
 
     override fun close() = try {
         //performHandshake() TODO implement handshake
+            // TODO close the coroutine channels (actors)
         channel.close()
     } finally {
         engine.closeOutbound()
@@ -88,38 +132,43 @@ class SecureSocketChannel(
 
     companion object {
 
-        private suspend fun SSLEngine.runDelegatedTasks(
-            dispatcher: CoroutineDispatcher
-        ) = coroutineScope {
+        private fun CoroutineScope.runDelegatedTasks(engine: SSLEngine) {
             var task: Runnable?
-            while (delegatedTask.also { task = it } != null) {
-                launch(dispatcher) {
+            while (engine.delegatedTask.also { task = it } != null) {
+                launch {
                     task!!.run()
                 }
             }
         }
 
+
+        /*
+        TODO create suspended helper functions?
+
+         */
         fun open(
             engine: SSLEngine,
-            dispatcher: CoroutineDispatcher = Dispatchers.Default
+            scope: CoroutineScope
         ): SecureSocketChannel = open(
             channel = SocketChannel.open(),
-            engine, dispatcher
+            engine,
+            scope
         )
 
         fun open(
             remote: SocketAddress,
             engine: SSLEngine,
-            dispatcher: CoroutineDispatcher = Dispatchers.Default
+            scope: CoroutineScope
         ): SecureSocketChannel = open(
             channel = SocketChannel.open(remote),
-            engine, dispatcher
+            engine,
+            scope
         )
 
         fun open(
             channel: SocketChannel,
             engine: SSLEngine,
-            dispatcher: CoroutineDispatcher = Dispatchers.Default
+            scope: CoroutineScope
         ): SecureSocketChannel = SecureSocketChannel(
             channel = channel.apply {
                 configureBlocking(false)
@@ -127,7 +176,7 @@ class SecureSocketChannel(
             engine = engine.apply {
                 beginHandshake()
             },
-            dispatcher
+            scope
         )
     }
 }
