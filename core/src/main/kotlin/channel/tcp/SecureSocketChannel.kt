@@ -12,6 +12,7 @@ import java.nio.ByteBuffer
 import java.nio.channels.SocketChannel
 import javax.net.ssl.SSLEngine
 import javax.net.ssl.SSLSession
+import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
@@ -60,7 +61,7 @@ class SecureSocketChannel(
         !engine.isInboundDone
 
     override suspend fun read(buffer: ByteBuffer): Int = coroutineScope {
-        suspendCoroutine { continuation ->
+        suspendCoroutine<Int> { continuation ->
             launch {
                 deferredOperationsChannel.send(
                     element = launch(start = CoroutineStart.LAZY) {
@@ -72,7 +73,7 @@ class SecureSocketChannel(
     }
 
     override suspend fun write(buffer: ByteBuffer): Int = coroutineScope {
-        suspendCoroutine { continuation ->
+        suspendCoroutine<Int> { continuation ->
             launch {
                 deferredOperationsChannel.send(
                     element = launch(start = CoroutineStart.LAZY) {
@@ -94,7 +95,7 @@ class SecureSocketChannel(
             }
         }
         return coroutineScope {
-            suspendCoroutine { continuation ->
+            suspendCoroutine<HandshakeResult> { continuation ->
                 launch {
                     deferredOperationsChannel.send(
                         element = launch(start = CoroutineStart.LAZY) {
@@ -103,12 +104,6 @@ class SecureSocketChannel(
                     )
                 }
             }
-
-//            val handshake = async<> {
-//                TODO("Write handshake process.")
-//            }
-//            deferredOperationsChannel.send(handshake)
-//            return handshake.await()
         }
     }
 
@@ -141,6 +136,19 @@ class SecureSocketChannel(
             }
         }
 
+        private suspend inline fun <T> SendChannel<Job>.suspendOperations(
+            crossinline block: suspend CoroutineScope.(Continuation<T>) -> Unit
+        ): T = coroutineScope {
+            suspendCoroutine<T> { continuation ->
+                launch {
+                    send(
+                        launch(start = CoroutineStart.LAZY) {
+                            block(continuation)
+                        }
+                    )
+                }
+            }
+        }
 
         /*
         TODO create suspended helper functions?
