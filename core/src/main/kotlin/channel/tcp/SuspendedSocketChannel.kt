@@ -12,7 +12,11 @@ import kotlin.jvm.Throws
 
 open class SuspendedSocketChannel(
     override val channel: SocketChannel
-) : ClientChannel<SocketChannel>, Channel by channel {
+) : ClientChannel<SocketChannel> {
+
+
+    override val isOpen: Boolean
+        get() = channel.isOpen
 
     override val inetAddress: InetAddress
         get() = channel.socket().inetAddress
@@ -43,10 +47,12 @@ open class SuspendedSocketChannel(
         var read = 0
         var prev = 0
         launch {
-            while(buffer.hasRemaining() && prev != -1) {
+            do {
                 prev = channel.read(buffer)
-                read += prev
-            }
+                if (prev != -1) {
+                    read += prev
+                }
+            } while(buffer.hasRemaining() && prev != -1)
         }.join() // wait for this job to finish.
         return@coroutineScope read
     }
@@ -62,6 +68,10 @@ open class SuspendedSocketChannel(
             }
         }.join() // wait for this job to finish.
         return@coroutineScope written
+    }
+
+    override suspend fun close() {
+        channel.close()
     }
 
     override fun toString(): String =

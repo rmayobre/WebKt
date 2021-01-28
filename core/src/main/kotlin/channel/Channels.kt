@@ -4,10 +4,9 @@ import java.io.IOException
 import java.net.InetAddress
 import java.net.SocketAddress
 import java.nio.ByteBuffer
-import java.nio.channels.Channel
 import java.nio.channels.SelectableChannel
 
-interface NetworkChannel<T : SelectableChannel> : Channel {
+interface NetworkChannel<T : SelectableChannel> : SuspendedChannel {
 
     /** The channel being wrapped. */
     val channel: T
@@ -27,7 +26,7 @@ interface NetworkChannel<T : SelectableChannel> : Channel {
     fun bind(local: SocketAddress)
 }
 
-interface SuspendedByteChannel : Channel {
+interface SuspendedByteChannel : SuspendedChannel {
     /**
      * A suspended process of reading from a socket connection into a buffer.
      * @param buffer the buffer where data is read into.
@@ -65,4 +64,10 @@ interface ServerChannel<T : SelectableChannel, C : SelectableChannel> : NetworkC
      * the connection's interface.
      */
     fun accept(): ClientChannel<C>
+}
+
+interface SuspendedChannel {
+    val isOpen: Boolean
+
+    suspend fun close()
 }

@@ -36,5 +36,5 @@ interface TLSChannel {
      * @return True if the connection handshake was successful or false if an error occurred.
      * @throws IOException if an error occurs during read/write to the socket channel.
      */
-    suspend fun performHandshake(): HandshakeResult
+    suspend fun performHandshake(): Boolean
 }
