@@ -13,4 +13,5 @@ repositories {
 dependencies {
     api(project(":core"))
     implementation(Deps.kotlin)
+    implementation(Deps.coroutines)
 }
