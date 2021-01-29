@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "1.4.20"
+    kotlin("jvm") version Deps.Version.kotlin
     `java-library`
 }
 
@@ -11,6 +11,6 @@ repositories {
 }
 
 dependencies {
-    api(project(":http"))
+    api(project(":http:core"))
     implementation(Deps.kotlin)
 }

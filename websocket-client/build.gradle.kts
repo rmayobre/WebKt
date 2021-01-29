@@ -11,7 +11,7 @@ repositories {
 }
 
 dependencies {
-    api(project(":http-client"))
+//    api(project(":http-client"))
     api(project(":websocket"))
     implementation(Deps.kotlin)
 }

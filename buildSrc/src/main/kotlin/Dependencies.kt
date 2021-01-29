@@ -9,11 +9,11 @@ object Deps {
 
     object Version {
         // Kotlin library versions
-        const val kotlin = "1.4.20"
+        const val kotlin = "1.4.21"
         const val coroutines = "1.4.2"
 
         // Unit testing versions
-        const val mockk = "1.10.3-jdk8"
+        const val mockk = "1.10.5"
         const val junit = "4.12"
     }
 }

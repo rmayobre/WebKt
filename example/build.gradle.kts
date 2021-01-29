@@ -13,5 +13,5 @@ repositories {
 dependencies {
     implementation(Deps.kotlin)
     implementation(project(":core"))
-    implementation(project(":http-server"))
+//    implementation(project(":http-server"))
 }
