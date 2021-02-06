@@ -4,10 +4,11 @@ plugins {
 
 subprojects {
     version = "1.0.0"
+
 }
 
 dependencies {
-    api(project(":core"))
+    implementation(project(":core"))
     implementation(Deps.kotlin)
     implementation(Deps.coroutines)
 }
