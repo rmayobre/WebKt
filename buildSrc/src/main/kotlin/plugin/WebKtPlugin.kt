@@ -29,6 +29,7 @@ abstract class WebKtPlugin : Plugin<Project> {
      * Configure dependencies to the project.
      * @see api
      * @see implementation
+     * @see testImplementation
      */
     protected abstract fun DependencyHandlerScope.dependencies()
 

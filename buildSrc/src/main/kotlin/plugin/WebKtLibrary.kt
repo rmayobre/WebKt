@@ -3,9 +3,11 @@ package plugin
 import org.gradle.api.plugins.PluginContainer
 import org.gradle.kotlin.dsl.DependencyHandlerScope
 
-class WebKtCommonPlugin : WebKtPlugin() {
+class WebKtLibrary : WebKtPlugin() {
+
     override fun PluginContainer.plugins() {
-        // No plugins are implemented.
+        apply("org.gradle.java-library")
+        apply("org.jetbrains.kotlin.jvm")
     }
 
     override fun DependencyHandlerScope.dependencies() {

@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm") version Deps.Version.kotlin
-    `java-library`
+    `WebKt-Library`
 }
 
 group = "io.webkt"

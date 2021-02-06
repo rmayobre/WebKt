@@ -1,5 +1,4 @@
 plugins {
-//    kotlin("jvm") version "1.4.20"
     `kotlin-dsl`
 }
 
@@ -8,15 +7,11 @@ repositories {
     mavenCentral()
 }
 
-//dependencies {
-//    implementation(kotlin("stdlib"))
-//}
-
 gradlePlugin {
     plugins {
-        register("WebKt-Common-Plugin") {
-            id = "WebKt-Common-Plugin"
-            implementationClass = "io.webkt.plugin.WebKtCommonPlugin"
+        register("WebKt-Library") {
+            id = "WebKt-Library"
+            implementationClass = "io.webkt.plugin.WebKtLibrary"
         }
     }
 }
