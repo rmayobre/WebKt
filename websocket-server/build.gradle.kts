@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version Deps.Version.kotlin
+//    kotlin("jvm") version Deps.Version.kotlin
     `java-library`
 }
 

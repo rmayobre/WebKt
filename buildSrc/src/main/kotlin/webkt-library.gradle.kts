@@ -1,9 +1,8 @@
 plugins {
-    kotlin("jvm")version "1.4.21"
     `java-library`
 }
 
-//group = "io.webkt"
+group = "io.webkt"
 
 repositories {
     mavenCentral()
@@ -11,8 +10,9 @@ repositories {
 }
 
 dependencies {
-//    implementation(Deps.kotlin)
-//    implementation(Deps.coroutines)
-//    testImplementation(Deps.junit)
-//    testImplementation(Deps.mockk)
+    implementation(Deps.kotlin)
+//    implementation(Deps.kotlinGradle)
+    implementation(Deps.coroutines)
+    testImplementation(Deps.junit)
+    testImplementation(Deps.mockk)
 }

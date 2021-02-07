@@ -1,0 +1,4 @@
+package channel
+
+class MessageChannel {
+}
