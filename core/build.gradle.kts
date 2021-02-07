@@ -1,9 +1,10 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
-    kotlin("jvm") version Deps.Version.kotlin
-    `WebKt-Library`
+//    kotlin("jvm") version Deps.Version.kotlin
+//    `kotlin`
+//    `WebKt-Library`
+    `webkt-library`
 }
+//apply(plugin = )
 
 group = "io.webkt"
 version = "1.0.0"
@@ -12,12 +13,12 @@ repositories {
     mavenCentral()
 }
 
-dependencies {
-    implementation(Deps.kotlin)
-    implementation(Deps.coroutines)
-    testImplementation(Deps.junit)
-    testImplementation(Deps.mockk)
-}
+//dependencies {
+//    implementation(Deps.kotlin)
+//    implementation(Deps.coroutines)
+//    testImplementation(Deps.junit)
+//    testImplementation(Deps.mockk)
+//}
 //
 // This code will enable inline class
 //
