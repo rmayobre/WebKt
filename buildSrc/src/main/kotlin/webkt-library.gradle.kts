@@ -1,18 +1,21 @@
+import gradle.kotlin.dsl.accessors._566dc064233c60a31df379898f991b12.implementation
+import gradle.kotlin.dsl.accessors._566dc064233c60a31df379898f991b12.testImplementation
+import org.gradle.kotlin.dsl.`java-library`
+import org.gradle.kotlin.dsl.dependencies
+
 plugins {
     `java-library`
 }
 
-group = "io.webkt"
-
-repositories {
-    mavenCentral()
-    jcenter()
-}
-
 dependencies {
-    implementation(Deps.kotlin)
-//    implementation(Deps.kotlinGradle)
-    implementation(Deps.coroutines)
-    testImplementation(Deps.junit)
-    testImplementation(Deps.mockk)
+    with(WebKtLibraryLibs) {
+        // Configures designated dependencies to "implementation".
+        implementations.forEach {
+            implementation(it)
+        }
+        // Configures designated dependencies to "testImplementation".
+        testImplementations.forEach {
+            testImplementation(it)
+        }
+    }
 }

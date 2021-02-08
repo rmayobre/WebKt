@@ -1,5 +1,5 @@
 plugins {
-    `WebKt-Library`
+    `webkt-library`
 }
 
-version = "1.0.0"
+version = "1.0.0-ALPHA"

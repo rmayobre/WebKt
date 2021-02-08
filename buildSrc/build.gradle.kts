@@ -1,17 +1,12 @@
 plugins {
     `kotlin-dsl`
+//    `kotlin-dsl-precompiled-script-plugins`
 }
 
 repositories {
-    jcenter()
     mavenCentral()
 }
 
-gradlePlugin {
-    plugins {
-        register("WebKt-Library") {
-            id = "WebKt-Library"
-            implementationClass = "plugin.WebKtLibrary"
-        }
-    }
+dependencies {
+    implementation(kotlin("stdlib"))
 }

@@ -1,17 +1,20 @@
 rootProject.name = "WebKt"
 include("core")
-include("http:core")
+
+// Include HTTP projects.
+include("http")
+include("http:common")
+findProject(":http:common")?.name = "common"
 include("http:client")
+findProject(":http:client")?.name = "client"
 include("http:server")
+findProject(":http:server")?.name = "server"
+
+// Include Websocket projects.
 include("websocket")
-include("websocket-client")
-include("websocket-server")
-include("example")
-//include("http:core")
-//findProject(":http:core")?.name = "core"
-//include("http:client")
-//findProject(":http:client")?.name = "client"
-//include("http:server")
-//findProject(":http:server")?.name = "server"
-
-
+include("websocket:common")
+findProject(":websocket:common")?.name = "common"
+include("websocket:client")
+findProject(":websocket:client")?.name = "client"
+include("websocket:server")
+findProject(":websocket:server")?.name = "server"

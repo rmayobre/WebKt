@@ -1,4 +1,4 @@
-object Deps {
+object Lib {
     // Kotlin dependencies
     const val kotlin = "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${Version.kotlin}"
     const val kotlinGradle = "org.jetbrains.kotlin:kotlin-gradle-plugin:${Version.kotlin}"
@@ -17,4 +17,17 @@ object Deps {
         const val mockk = "1.10.5"
         const val junit = "4.12"
     }
+}
+
+object WebKtLibraryLibs {
+    val implementations = listOf(
+        Lib.kotlin,
+        Lib.kotlinGradle,
+        Lib.coroutines
+    )
+
+    val testImplementations = listOf(
+        Lib.junit,
+        Lib.mockk
+    )
 }

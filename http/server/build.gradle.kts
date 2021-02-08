@@ -1,5 +1,8 @@
 plugins {
-    `WebKt-Library`
+    `webkt-library`
 }
 
-version = "1.0.0"
+dependencies {
+    implementation(project(":core"))
+    implementation(project(":http:common"))
+}

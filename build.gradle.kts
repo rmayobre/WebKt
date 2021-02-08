@@ -1,18 +1,22 @@
+
 plugins {
-    kotlin("jvm") version Deps.Version.kotlin
+    kotlin("jvm") version Lib.Version.kotlin
 }
 
-repositories {
-    mavenCentral()
+version = "1.0.0-ALPHA"
+
+allprojects {
+    group = "io.webkt"
+
+    repositories {
+        mavenCentral()
+    }
 }
 
 subprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
 
-    group = "io.webkt"
-
-    repositories {
-        mavenCentral()
-        jcenter()
+    dependencies {
+        implementation(kotlin("stdlib"))
     }
 }

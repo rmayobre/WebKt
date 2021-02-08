@@ -1,5 +1,8 @@
 package channel
 
+import message.BadMessageException
+import message.Request
+import message.Response
 import java.io.IOException
 import java.nio.ByteBuffer
 import kotlin.jvm.Throws
@@ -56,7 +59,7 @@ internal fun buildMessage(
     startLine: String,
     headers: MutableMap<String, String>,
     body: String? = null
-): Message {
+): Any {
     val lines = startLine.splitByWhitespace()
     return Method.find(lines[0])?.let { method ->
         Request(
@@ -78,3 +81,4 @@ internal fun buildMessage(
     } ?: run {
         throw BadMessageException("Could not build request from provided data.")
     }
+}
