@@ -1,6 +1,10 @@
 package channel.tcp
 
 import channel.ServerChannel
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import java.io.IOException
 import java.net.InetAddress
 import java.net.ProtocolFamily
@@ -14,7 +18,16 @@ import kotlin.jvm.Throws
  */
 open class SuspendedServerSocketChannel(
     override val channel: ServerSocketChannel,
-) : ServerChannel<ServerSocketChannel, SocketChannel>, Channel by channel {
+    dispatcher: CoroutineDispatcher = Dispatchers.IO
+) : ServerChannel<ServerSocketChannel, SocketChannel> {
+
+    private val job = Job()
+
+    override val scope: CoroutineScope =
+        CoroutineScope(dispatcher + job)
+
+    override val isOpen: Boolean
+        get() = channel.isOpen
 
     override val inetAddress: InetAddress
         get() = channel.socket().inetAddress
@@ -32,6 +45,12 @@ open class SuspendedServerSocketChannel(
     override fun accept(): SuspendedSocketChannel =
         SuspendedSocketChannel(channel.accept()!!)
 
+    override suspend fun close(wait: Boolean) {
+        //TODO implement waiting
+        job.cancel()
+        channel.close()
+    }
+
     override fun toString(): String =
         "SuspendedServerSocketChannel: ${hashCode()}\n" +
                 "Channel Class:     ${channel.javaClass}\n" +
@@ -45,12 +64,11 @@ open class SuspendedServerSocketChannel(
          * @throws IOException An I/O related error was thrown
          */
         @Throws(IOException::class)
-        fun open(protocol: ProtocolFamily? = null): SuspendedServerSocketChannel =
+        fun open(address: SocketAddress? = null): SuspendedServerSocketChannel =
             SuspendedServerSocketChannel(
-                channel = (protocol?.let {
-                    ServerSocketChannel.open(it)
-                } ?: ServerSocketChannel.open()).apply {
+                channel = ServerSocketChannel.open().apply {
                     configureBlocking(false)
+                    address?.let { bind(it) }
                 }
             )
     }

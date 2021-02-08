@@ -1,20 +1,15 @@
 package channel.tcp
 
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
 import java.io.IOException
-import java.net.InetAddress
-import java.net.ProtocolFamily
-import java.net.SocketAddress
-import java.nio.channels.Channel
 import java.nio.channels.ServerSocketChannel
 import javax.net.ssl.SSLContext
 import kotlin.jvm.Throws
 
 class SecureServerSocketChannel(
     channel: ServerSocketChannel,
-    private val context: SSLContext,
-    private val dispatcher: CoroutineDispatcher
+    private val context: SSLContext = SSLContext.getDefault(),
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : SuspendedServerSocketChannel(channel) {
 
     var needClientAuth = false
@@ -25,6 +20,7 @@ class SecureServerSocketChannel(
 
     var enabledCipherSuites: Array<String> = emptyArray()
 
+    @ObsoleteCoroutinesApi
     override fun accept(): SecureSocketChannel = SecureSocketChannel(
         channel = channel.accept()!!,
         engine = context.createSSLEngine().apply {
@@ -33,8 +29,8 @@ class SecureServerSocketChannel(
             wantClientAuth = this@SecureServerSocketChannel.wantClientAuth
             enabledProtocols = this@SecureServerSocketChannel.enabledProtocols
             enabledCipherSuites = this@SecureServerSocketChannel.enabledCipherSuites
-        },
-        dispatcher = dispatcher
+        }
+    // TODO should there be a new dispatcher?
     )
 
     override fun toString(): String =
@@ -49,18 +45,16 @@ class SecureServerSocketChannel(
          * encrypted SSL connection.
          * @param context The SSLContext used to produce SSLEngines for each connection.
          * @param dispatcher The dispatcher that will handle the delegated tasks of the SSLEngines.
-         * @param protocol A ProtocolFamily that can be applied to the open ServerSocketChannel
          * @throws IOException An I/O related error was thrown
          */
         @Throws(IOException::class)
         fun open(
             context: SSLContext = SSLContext.getDefault(),
-            dispatcher: CoroutineDispatcher = Dispatchers.Default,
-            protocol: ProtocolFamily? = null
+            dispatcher: CoroutineDispatcher = Dispatchers.IO
         ): SecureServerSocketChannel = SecureServerSocketChannel(
-            channel = protocol?.let {
-                ServerSocketChannel.open(it)
-            } ?: ServerSocketChannel.open(),
+            channel = ServerSocketChannel.open().apply {
+                configureBlocking(false)
+            },
             context,
             dispatcher
         )

@@ -1,11 +1,12 @@
 package engine
 
 import app.NetworkApplication
+import channel.NetworkChannel
 import operation.OperationsChannel
 import java.io.IOException
 import kotlin.jvm.Throws
 
-interface NetworkChannelEngine  {
+interface NetworkChannelEngine<T : NetworkChannel<*>>  {
 
     /**
      * Is the engine running?
@@ -15,7 +16,7 @@ interface NetworkChannelEngine  {
     /**
      * Start your engine.
      */
-    fun NetworkApplication.start(/* Create some kind of interface to communicate with. */): OperationsChannel
+    fun NetworkApplication.start(/* Create some kind of interface to communicate with. */): OperationsChannel<T>
 
 
     /**

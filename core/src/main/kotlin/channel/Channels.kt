@@ -1,5 +1,6 @@
 package channel
 
+import kotlinx.coroutines.CoroutineScope
 import java.io.IOException
 import java.net.InetAddress
 import java.net.SocketAddress
@@ -42,6 +43,10 @@ interface SuspendedByteChannel : SuspendedChannel {
     suspend fun write(buffer: ByteBuffer): Int
 }
 
+/**
+ * A SuspendedChannel that orchestrates communication between endpoints. ClientChannels are able to send and receive
+ * data and maintain the connection of a socket.
+ */
 interface ClientChannel<T : SelectableChannel> : NetworkChannel<T>, SuspendedByteChannel {
     /** Get the channel's remote address. */
     val remoteAddress: SocketAddress
@@ -58,6 +63,9 @@ interface ClientChannel<T : SelectableChannel> : NetworkChannel<T>, SuspendedByt
     fun connect(remote: SocketAddress)
 }
 
+/**
+ * A SuspendedChannel that accepts new incoming connections.
+ */
 interface ServerChannel<T : SelectableChannel, C : SelectableChannel> : NetworkChannel<T> {
     /**
      * Accepts an incoming connection and constructs a SuspendedSocketChannel as
@@ -67,7 +75,16 @@ interface ServerChannel<T : SelectableChannel, C : SelectableChannel> : NetworkC
 }
 
 interface SuspendedChannel {
+    /** Is the channel open? */
     val isOpen: Boolean
 
-    suspend fun close()
+    /** The CoroutineScope that is operating the network jobs. */
+    val scope: CoroutineScope
+
+    /**
+     * Close the channel and socket. If [wait] is set to TRUE, the channel will prevent any new suspend function calls
+     * from creating jobs on the [SuspendedChannel.scope] CoroutineScope.
+     * @param wait wait for jobs to finish? If this is marked FALSE, then it will cancel all jobs.
+     */
+    suspend fun close(wait: Boolean = false)
 }

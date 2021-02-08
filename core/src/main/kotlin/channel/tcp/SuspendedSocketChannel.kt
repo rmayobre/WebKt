@@ -1,8 +1,7 @@
 package channel.tcp
 
 import channel.ClientChannel
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.net.InetAddress
@@ -11,12 +10,17 @@ import java.nio.channels.*
 import kotlin.jvm.Throws
 
 open class SuspendedSocketChannel(
-    override val channel: SocketChannel
+    override val channel: SocketChannel,
+    dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ClientChannel<SocketChannel> {
 
+    private val job = Job()
 
     override val isOpen: Boolean
         get() = channel.isOpen
+
+    override val scope: CoroutineScope =
+        CoroutineScope(dispatcher + job)
 
     override val inetAddress: InetAddress
         get() = channel.socket().inetAddress
@@ -34,19 +38,20 @@ open class SuspendedSocketChannel(
         get() = channel.socket().localPort
 
     override fun bind(local: SocketAddress) {
+        // TODO handle exceptions
         channel.bind(local)
     }
 
     override fun connect(remote: SocketAddress) {
+        // TODO handle exceptions
         channel.connect(remote)
     }
 
-    // TODO figure out how to handle exceptions
     @Suppress("BlockingMethodInNonBlockingContext")
-    override suspend fun read(buffer: ByteBuffer): Int = coroutineScope {
+    override suspend fun read(buffer: ByteBuffer): Int  {
         var read = 0
         var prev = 0
-        launch {
+        scope.launch {
             do {
                 prev = channel.read(buffer)
                 if (prev != -1) {
@@ -54,23 +59,25 @@ open class SuspendedSocketChannel(
                 }
             } while(buffer.hasRemaining() && prev != -1)
         }.join() // wait for this job to finish.
-        return@coroutineScope read
+        return read
     }
 
     @Suppress("BlockingMethodInNonBlockingContext")
-    override suspend fun write(buffer: ByteBuffer): Int = coroutineScope {
+    override suspend fun write(buffer: ByteBuffer): Int {
         var written = 0
         var prev = 0
-        launch {
+        scope.launch {
             while(buffer.hasRemaining() && prev != -1) {
                 prev = channel.write(buffer)
                 written += prev
             }
         }.join() // wait for this job to finish.
-        return@coroutineScope written
+        return written
     }
 
-    override suspend fun close() {
+    override suspend fun close(wait: Boolean) {
+        //TODO implement waiting
+        job.cancel()
         channel.close()
     }
 
@@ -132,6 +139,7 @@ open class SuspendedSocketChannel(
             SuspendedSocketChannel(
                 channel = channel.apply {
                     configureBlocking(false)
+//                connect() TODO make this an async connection - read the connect method.
                 }
             )
     }

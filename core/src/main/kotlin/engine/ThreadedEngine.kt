@@ -13,7 +13,7 @@ import java.nio.channels.Selector
 
 class ThreadedEngine<T : NetworkChannel<*>>(
     private val threadName: String = DEFAULT_THREAD_NAME
-): NetworkChannelEngine {
+): NetworkChannelEngine<T> {
 
     private lateinit var operationsActor: SendChannel<Operation<T>>
 
