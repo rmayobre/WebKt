@@ -23,11 +23,13 @@ open class SuspendedServerSocketChannel(
 
     private val job = Job()
 
+    private var closing: Boolean = false
+
     override val scope: CoroutineScope =
         CoroutineScope(dispatcher + job)
 
     override val isOpen: Boolean
-        get() = channel.isOpen
+        get() = channel.isOpen && !closing
 
     override val inetAddress: InetAddress
         get() = channel.socket().inetAddress
@@ -46,9 +48,14 @@ open class SuspendedServerSocketChannel(
         SuspendedSocketChannel(channel.accept()!!)
 
     override suspend fun close(wait: Boolean) {
-        //TODO implement waiting
-        job.cancel()
-        channel.close()
+        if (!closing) {
+            closing = true
+            if (wait) {
+                job.join()
+            }
+            channel.close()
+            closing = false // channel is closed.
+        }
     }
 
     override fun toString(): String =

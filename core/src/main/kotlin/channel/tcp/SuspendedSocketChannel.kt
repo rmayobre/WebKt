@@ -16,8 +16,10 @@ open class SuspendedSocketChannel(
 
     private val job = Job()
 
+    private var closing: Boolean = false
+
     override val isOpen: Boolean
-        get() = channel.isOpen
+        get() = channel.isOpen && !closing
 
     override val scope: CoroutineScope =
         CoroutineScope(dispatcher + job)
@@ -38,20 +40,20 @@ open class SuspendedSocketChannel(
         get() = channel.socket().localPort
 
     override fun bind(local: SocketAddress) {
-        // TODO handle exceptions
+        // TODO handle exceptions, capture result
         channel.bind(local)
     }
 
     override fun connect(remote: SocketAddress) {
-        // TODO handle exceptions
+        // TODO handle exceptions, capture result
         channel.connect(remote)
     }
 
     @Suppress("BlockingMethodInNonBlockingContext")
-    override suspend fun read(buffer: ByteBuffer): Int  {
+    override suspend fun read(buffer: ByteBuffer): Int = if (!closing) {
         var read = 0
-        var prev = 0
         scope.launch {
+            var prev: Int
             do {
                 prev = channel.read(buffer)
                 if (prev != -1) {
@@ -59,26 +61,31 @@ open class SuspendedSocketChannel(
                 }
             } while(buffer.hasRemaining() && prev != -1)
         }.join() // wait for this job to finish.
-        return read
-    }
+        read
+    } else 0
 
     @Suppress("BlockingMethodInNonBlockingContext")
-    override suspend fun write(buffer: ByteBuffer): Int {
+    override suspend fun write(buffer: ByteBuffer): Int = if (!closing) {
         var written = 0
-        var prev = 0
         scope.launch {
+            var prev = 0
             while(buffer.hasRemaining() && prev != -1) {
                 prev = channel.write(buffer)
                 written += prev
             }
         }.join() // wait for this job to finish.
-        return written
-    }
+        written
+    } else 0
 
     override suspend fun close(wait: Boolean) {
-        //TODO implement waiting
-        job.cancel()
-        channel.close()
+        if (!closing) {
+            closing = true
+            if (wait) {
+                job.join()
+            }
+            channel.close()
+            closing = false // channel is closed.
+        }
     }
 
     override fun toString(): String =

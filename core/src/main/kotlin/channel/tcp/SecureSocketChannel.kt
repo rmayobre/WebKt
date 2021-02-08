@@ -61,7 +61,7 @@ class SecureSocketChannel(
     }
 
     override val isOpen: Boolean
-        get() = channel.isOpen &&
+        get() = super.isOpen &&
                 !engine.isOutboundDone &&
                 !engine.isInboundDone
 
