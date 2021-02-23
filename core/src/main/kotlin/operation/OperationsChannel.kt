@@ -1,9 +1,9 @@
 package operation
 
-import channel.NetworkChannel
+import channel.SuspendedNetworkChannel
 import kotlinx.coroutines.channels.SendChannel
 
-class OperationsChannel<T : NetworkChannel<*>>(
+class OperationsChannel<T : SuspendedNetworkChannel<*>>(
     private val channel: SendChannel<Operation<T>>
 ) {
 

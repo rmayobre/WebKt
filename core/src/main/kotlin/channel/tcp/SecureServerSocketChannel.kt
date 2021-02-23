@@ -2,6 +2,7 @@ package channel.tcp
 
 import kotlinx.coroutines.*
 import java.io.IOException
+import java.net.SocketAddress
 import java.nio.channels.ServerSocketChannel
 import javax.net.ssl.SSLContext
 import kotlin.jvm.Throws
@@ -9,8 +10,8 @@ import kotlin.jvm.Throws
 class SecureServerSocketChannel(
     channel: ServerSocketChannel,
     private val context: SSLContext = SSLContext.getDefault(),
-    private val dispatcher: CoroutineDispatcher = Dispatchers.IO
-) : SuspendedServerSocketChannel(channel) {
+    dispatcher: CoroutineDispatcher = Dispatchers.IO
+) : SuspendedServerSocketChannel(channel, dispatcher) {
 
     var needClientAuth = false
 
@@ -21,17 +22,20 @@ class SecureServerSocketChannel(
     var enabledCipherSuites: Array<String> = emptyArray()
 
     @ObsoleteCoroutinesApi
-    override fun accept(): SecureSocketChannel = SecureSocketChannel(
-        channel = channel.accept()!!,
-        engine = context.createSSLEngine().apply {
-            useClientMode = false
-            needClientAuth = this@SecureServerSocketChannel.needClientAuth
-            wantClientAuth = this@SecureServerSocketChannel.wantClientAuth
-            enabledProtocols = this@SecureServerSocketChannel.enabledProtocols
-            enabledCipherSuites = this@SecureServerSocketChannel.enabledCipherSuites
+    override fun accept(): SecureSocketChannel? =
+        channel.accept()?.let {
+            SecureSocketChannel(
+                channel = it,
+                engine = context.createSSLEngine().apply {
+                    useClientMode = false
+                    needClientAuth = this@SecureServerSocketChannel.needClientAuth
+                    wantClientAuth = this@SecureServerSocketChannel.wantClientAuth
+                    enabledProtocols = this@SecureServerSocketChannel.enabledProtocols
+                    enabledCipherSuites = this@SecureServerSocketChannel.enabledCipherSuites
+                },
+                dispatcher
+            )
         }
-    // TODO should there be a new dispatcher?
-    )
 
     override fun toString(): String =
         "SecureServerSocketChannel: ${hashCode()}\n" +
@@ -48,15 +52,21 @@ class SecureServerSocketChannel(
          * @throws IOException An I/O related error was thrown
          */
         @Throws(IOException::class)
-        fun open(
+        @Suppress("BlockingMethodInNonBlockingContext")
+        suspend fun open(
+            address: SocketAddress? = null,
             context: SSLContext = SSLContext.getDefault(),
             dispatcher: CoroutineDispatcher = Dispatchers.IO
-        ): SecureServerSocketChannel = SecureServerSocketChannel(
-            channel = ServerSocketChannel.open().apply {
-                configureBlocking(false)
-            },
-            context,
-            dispatcher
-        )
+        ): SecureServerSocketChannel =
+            coroutineScope {
+                SecureServerSocketChannel(
+                    channel = ServerSocketChannel.open().apply {
+                        configureBlocking(false)
+                        address?.let { bind(it) }
+                    },
+                    context,
+                    dispatcher
+                )
+            }
     }
 }

@@ -1,6 +1,6 @@
 package engine
 
-import channel.NetworkChannel
+import channel.SuspendedNetworkChannel
 import java.nio.channels.SelectableChannel
 import java.nio.channels.SelectionKey
 import java.nio.channels.Selector
@@ -13,7 +13,7 @@ import java.nio.channels.Selector
  * within the [SelectionKey.attachment]
  */
 fun Selector.register(
-    networkChannel: NetworkChannel<*>,
+    networkChannel: SuspendedNetworkChannel<*>,
     operationFlag: Int,
     attachment: Any? = null
 ) = register(

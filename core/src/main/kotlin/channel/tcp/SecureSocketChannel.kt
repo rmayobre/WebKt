@@ -20,7 +20,6 @@ import kotlin.coroutines.suspendCoroutine
 import kotlin.jvm.Throws
 
 /**
- * TODO this still needs redesign work to make it scale with coroutines better.
  * @param channel
  * @param engine the required SSLEngine
  * @param scope this is a scope for running background tasks. It is not recommended to provided a CoroutineScope for IO operations.
@@ -49,6 +48,11 @@ class SecureSocketChannel(
     override val session: SSLSession
         get() = engine.session
 
+    override val isOpen: Boolean
+        get() = super.isOpen &&
+                !engine.isOutboundDone &&
+                !engine.isInboundDone
+
     init {
         operationsActor = scope.operationsActor()
         // Initialize buffers for decrypted data.
@@ -60,11 +64,7 @@ class SecureSocketChannel(
         peerPacketData = ByteBuffer.allocate(session.packetBufferSize)
     }
 
-    override val isOpen: Boolean
-        get() = super.isOpen &&
-                !engine.isOutboundDone &&
-                !engine.isInboundDone
-
+    @Suppress("BlockingMethodInNonBlockingContext")
     override suspend fun read(buffer: ByteBuffer): Int = suspendCoroutine { continuation ->
         scope.launch {
             operationsActor.send(
@@ -123,6 +123,7 @@ class SecureSocketChannel(
         }
     }
 
+    @Suppress("BlockingMethodInNonBlockingContext")
     override suspend fun write(buffer: ByteBuffer): Int = suspendCoroutine { continuation ->
         scope.launch {
             operationsActor.send(
@@ -177,7 +178,7 @@ class SecureSocketChannel(
                                 when (status) {
                                     NEED_WRAP -> wrap()
                                     NEED_UNWRAP -> unwrap()
-                                    NEED_TASK -> runDelegatedTasks(engine)
+                                    NEED_TASK -> engine.runDelegatedTasks()
                                     else -> if (peerPacketData.hasRemaining()) { // FINISHED
                                         channel.write(peerPacketData)
                                     }
@@ -194,7 +195,6 @@ class SecureSocketChannel(
         }
     }
 
-    // TODO wrap needs to be redesigned.
     private fun wrap() {
         packetData.clear()
         val result: SSLEngineResult = engine.wrap(applicationData, packetData)
@@ -214,7 +214,6 @@ class SecureSocketChannel(
         return bytesWritten
     }
 
-    // TODO unwrap needs to be redesigned.
     private fun unwrap() {
         if (readToPeerPacketData() < 0) {
             return
@@ -268,16 +267,20 @@ class SecureSocketChannel(
 
     @ExperimentalCoroutinesApi
     override suspend fun close(wait: Boolean) {
-        //TODO implement waiting
         scope.launch {
-            performHandshake()
+            launch {
+                performHandshake()
+            }.apply {
+                invokeOnCompletion {
+                    engine.closeOutbound()
+                }
+            }.join()
             super.close(wait)
-        }.invokeOnCompletion {
-            engine.closeOutbound()
-        }
+        }.takeIf { wait }?.join()
     }
 
-    override fun toString(): String = toString(engine)
+    override fun toString(): String =
+        toString(engine)
 
     companion object {
 
@@ -292,19 +295,23 @@ class SecureSocketChannel(
                 }
             }
 
-        private fun CoroutineScope.runDelegatedTasks(engine: SSLEngine) {
-            var task: Runnable?
-            while (engine.delegatedTask.also { task = it } != null) {
-                launch {
-                    task!!.run()
+        private suspend fun SSLEngine.runDelegatedTasks() = coroutineScope {
+            launch {
+                var task: Runnable?
+                while (delegatedTask.also { task = it } != null) {
+                    launch {
+                        task!!.run()
+                    }
                 }
-            }
+            }.join()
+
         }
 
         private suspend inline fun <T> suspendOperations(
             channel: SendChannel<Job>,
             crossinline block: suspend CoroutineScope.(Continuation<T>) -> Unit
         ): T = coroutineScope {
+            delay(1000)
             suspendCoroutine { continuation ->
                 launch {
                     channel.send(
@@ -317,7 +324,8 @@ class SecureSocketChannel(
         }
 
         /**
-         * Constructs a SuspendedSocketChannel and connect to a remote address.
+         * Open a SuspendedSocketChannel and connect to the provided remote address. If no SocketAddress
+         * was provided, then the channel will construct and require the [connect] function to be called.
          *
          * @throws AsynchronousCloseException
          *         If another thread closes this channel
@@ -341,29 +349,25 @@ class SecureSocketChannel(
          *
          * @throws IOException An I/O related error was thrown
          */
-        @Throws(
-            AsynchronousCloseException::class,
-            ClosedByInterruptException::class,
-            UnresolvedAddressException::class,
-            UnsupportedAddressTypeException::class,
-            SecurityException::class,
-            IOException::class
-        )
-        fun open(
+        @Throws(IOException::class)
+        @Suppress("BlockingMethodInNonBlockingContext")
+        suspend fun open(
             remote: SocketAddress? = null,
             engine: SSLEngine = SSLContext.getDefault().createSSLEngine(),
             dispatcher: CoroutineDispatcher = Dispatchers.IO
-        ): SecureSocketChannel = SecureSocketChannel(
-            channel = (remote?.let {
-                SocketChannel.open(it)
-            } ?: SocketChannel.open()).apply {
-                configureBlocking(false)
-//                connect() TODO make this an async connection - read the connect method.
-            },
-            engine = engine.apply {
-                beginHandshake()
-            },
-            dispatcher
-        )
+        ): SecureSocketChannel =
+            coroutineScope {
+                SecureSocketChannel(
+                    channel = (remote?.let {
+                        SocketChannel.open(it)
+                    } ?: SocketChannel.open()).apply {
+                        configureBlocking(false)
+                    },
+                    engine = engine.apply {
+                        beginHandshake()
+                    },
+                    dispatcher
+                )
+            }
     }
 }

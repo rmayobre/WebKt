@@ -28,7 +28,7 @@ abstract class SuspendedServerApplication(
             //
             // A channel has able to connect to remote address.
             //
-            key.isAcceptable ->(key.attachment() as? Attachment<*>)?.toTypeOf<SuspendedServerSocketChannel> { channel, attachment ->
+            key.isAcceptable -> (key.attachment() as? Attachment<*>)?.toTypeOf<SuspendedServerSocketChannel> { channel, attachment ->
                 launch(
                     CoroutineExceptionHandler { _, error ->
                         launch {

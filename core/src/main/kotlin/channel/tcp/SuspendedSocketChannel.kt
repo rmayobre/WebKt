@@ -3,9 +3,9 @@ package channel.tcp
 import channel.ClientChannel
 import kotlinx.coroutines.*
 import java.io.IOException
-import java.nio.ByteBuffer
 import java.net.InetAddress
 import java.net.SocketAddress
+import java.nio.ByteBuffer
 import java.nio.channels.*
 import kotlin.jvm.Throws
 
@@ -16,10 +16,10 @@ open class SuspendedSocketChannel(
 
     private val job = Job()
 
-    private var closing: Boolean = false
+    private var isClosing: Boolean = false
 
     override val isOpen: Boolean
-        get() = channel.isOpen && !closing
+        get() = channel.isOpen && !isClosing
 
     override val scope: CoroutineScope =
         CoroutineScope(dispatcher + job)
@@ -39,52 +39,56 @@ open class SuspendedSocketChannel(
     override val localPort: Int
         get() = channel.socket().localPort
 
-    override fun bind(local: SocketAddress) {
-        // TODO handle exceptions, capture result
-        channel.bind(local)
-    }
-
-    override fun connect(remote: SocketAddress) {
-        // TODO handle exceptions, capture result
-        channel.connect(remote)
-    }
+    @Suppress("BlockingMethodInNonBlockingContext")
+    override suspend fun bind(local: SocketAddress): Unit =
+        withContext(scope.coroutineContext) {
+            channel.bind(local)
+        }
 
     @Suppress("BlockingMethodInNonBlockingContext")
-    override suspend fun read(buffer: ByteBuffer): Int = if (!closing) {
-        var read = 0
-        scope.launch {
-            var prev: Int
+    override suspend fun connect(remote: SocketAddress): Boolean =
+        withContext(scope.coroutineContext) {
+            channel.connect(remote)
+        }
+
+    @Suppress("BlockingMethodInNonBlockingContext")
+    override suspend fun read(buffer: ByteBuffer): Int =
+        if (!isClosing) { 
+            var read = 0
             do {
-                prev = channel.read(buffer)
-                if (prev != -1) {
-                    read += prev
+                val prev: Int = withContext(scope.coroutineContext) {
+                    channel.read(buffer)
                 }
-            } while(buffer.hasRemaining() && prev != -1)
-        }.join() // wait for this job to finish.
-        read
-    } else 0
+                read += if (prev > -1) prev else 0
+            } while(buffer.hasRemaining() && prev > 0)
+            read
+        } else 0
 
     @Suppress("BlockingMethodInNonBlockingContext")
-    override suspend fun write(buffer: ByteBuffer): Int = if (!closing) {
-        var written = 0
-        scope.launch {
-            var prev = 0
-            while(buffer.hasRemaining() && prev != -1) {
-                prev = channel.write(buffer)
-                written += prev
-            }
-        }.join() // wait for this job to finish.
-        written
-    } else 0
+    override suspend fun write(buffer: ByteBuffer): Int =
+        if (!isClosing) {
+            var written = 0
+            do {
+                val prev: Int = withContext(scope.coroutineContext) {
+                    channel.write(buffer)
+                }
+                written += if (prev > -1) prev else 0
+            } while (buffer.hasRemaining() && prev  > 0)
+            written
+        } else 0
 
+
+    @Suppress("BlockingMethodInNonBlockingContext")
     override suspend fun close(wait: Boolean) {
-        if (!closing) {
-            closing = true
+        if (!isClosing) {
+            isClosing = true
             if (wait) {
                 job.join()
+            } else {
+                job.cancel()
             }
             channel.close()
-            closing = false // channel is closed.
+            isClosing = false // channel is closed.
         }
     }
 
@@ -97,57 +101,40 @@ open class SuspendedSocketChannel(
             "Local Port:        $localPort\n"
 
     companion object {
-        /**
-         * Constructs a SuspendedSocketChannel with a standard SocketChannel. The SocketChannel is not
-         * connected to a remote address yet.
-         * @throws IOException An I/O related error was thrown
-         */
-        @Throws(IOException::class)
-        fun open(): SuspendedSocketChannel =
-            open(SocketChannel.open())
 
         /**
-         * Constructs a SuspendedSocketChannel and connect to a remote address.
-         *
+         * Open a SuspendedSocketChannel with the provided SocketAddress. If no SocketAddress is provided,
+         * then the Channel will not be connected.
          * @throws AsynchronousCloseException
          *         If another thread closes this channel
          *         while the connect operation is in progress
-         *
          * @throws ClosedByInterruptException
          *         If another thread interrupts the current thread
          *         while the connect operation is in progress, thereby
          *         closing the channel and setting the current thread's
          *         interrupt status
-         *
          * @throws UnresolvedAddressException
          *         If the given remote address is not fully resolved
-         *
          * @throws UnsupportedAddressTypeException
          *         If the type of the given remote address is not supported
-         *
          * @throws SecurityException
          *         If a security manager has been installed
          *         and it does not permit access to the given remote endpoint
-         *
-         * @throws IOException An I/O related error was thrown
+         * @throws IOException Could not open a network connection.
          */
-        @Throws(
-            AsynchronousCloseException::class,
-            ClosedByInterruptException::class,
-            UnresolvedAddressException::class,
-            UnsupportedAddressTypeException::class,
-            SecurityException::class,
-            IOException::class
-        )
-        fun open(remote: SocketAddress): SuspendedSocketChannel =
-            open(SocketChannel.open(remote))
-
-        fun open(channel: SocketChannel): SuspendedSocketChannel =
-            SuspendedSocketChannel(
-                channel = channel.apply {
-                    configureBlocking(false)
-//                connect() TODO make this an async connection - read the connect method.
+        @Throws(IOException::class)
+        @Suppress("BlockingMethodInNonBlockingContext")
+        suspend fun open(remote: SocketAddress? = null): SuspendedSocketChannel =
+            coroutineScope {
+                withContext(coroutineContext) {
+                    SuspendedSocketChannel(
+                        channel = (remote?.let {
+                            SocketChannel.open(it)
+                        } ?: SocketChannel.open()).apply {
+                            configureBlocking(false)
+                        }
+                    )
                 }
-            )
+            }
     }
 }

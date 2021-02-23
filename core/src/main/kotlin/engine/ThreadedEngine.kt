@@ -1,7 +1,7 @@
 package engine
 
 import app.NetworkApplication
-import channel.NetworkChannel
+import channel.SuspendedNetworkChannel
 import operation.Operation
 import operation.OperationsChannel
 import kotlinx.coroutines.ObsoleteCoroutinesApi
@@ -11,7 +11,7 @@ import java.lang.Runnable
 import java.nio.channels.SelectionKey
 import java.nio.channels.Selector
 
-class ThreadedEngine<T : NetworkChannel<*>>(
+class ThreadedEngine<T : SuspendedNetworkChannel<*>>(
     private val threadName: String = DEFAULT_THREAD_NAME
 ): NetworkChannelEngine<T> {
 
@@ -37,14 +37,10 @@ class ThreadedEngine<T : NetworkChannel<*>>(
             operationsActor = appScope.actor {
                 for (message in channel) {
                     when (message) {
-                        is Operation.Accept ->
-                            selector.register(message.channel, SelectionKey.OP_ACCEPT, message.attachment)
-                        is Operation.Connect ->
-                            selector.register(message.channel, SelectionKey.OP_CONNECT, message.attachment)
-                        is Operation.Read ->
-                            selector.register(message.channel, SelectionKey.OP_READ, message.attachment)
-                        is Operation.Write ->
-                            selector.register(message.channel, SelectionKey.OP_WRITE, message.attachment)
+                        is Operation.Accept ->  selector.register(message.channel, SelectionKey.OP_ACCEPT, message.attachment)
+                        is Operation.Connect -> selector.register(message.channel, SelectionKey.OP_CONNECT, message.attachment)
+                        is Operation.Read ->    selector.register(message.channel, SelectionKey.OP_READ, message.attachment)
+                        is Operation.Write ->   selector.register(message.channel, SelectionKey.OP_WRITE, message.attachment)
                     }
                 }
             }
@@ -67,14 +63,16 @@ class ThreadedEngine<T : NetworkChannel<*>>(
         }
     }
 
-    override fun stop() {
+    override fun stop(timeout: Long?, cause: Throwable?) {
         if (isRunning) {
             selector.close()
             selector.keys().forEach { key ->
                 key.channel().close()
             }
-            operationsActor.close() // TODO custom throwable for channel to signify a normal close.
-//            thread.join() TODO wait for thread to finish
+            operationsActor.close(cause)
+            timeout?.let {
+                thread.join(it)
+            } ?: thread.join()
         }
     }
 

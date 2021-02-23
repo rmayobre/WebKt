@@ -1,13 +1,9 @@
 package channel.tcp
 
 import channel.ServerChannel
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.*
 import java.io.IOException
 import java.net.InetAddress
-import java.net.ProtocolFamily
 import java.net.SocketAddress
 import java.nio.channels.*
 import kotlin.jvm.Throws
@@ -18,7 +14,7 @@ import kotlin.jvm.Throws
  */
 open class SuspendedServerSocketChannel(
     override val channel: ServerSocketChannel,
-    dispatcher: CoroutineDispatcher = Dispatchers.IO
+    protected val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ServerChannel<ServerSocketChannel, SocketChannel> {
 
     private val job = Job()
@@ -40,13 +36,18 @@ open class SuspendedServerSocketChannel(
     override val localPort: Int
         get() = channel.socket().localPort
 
-    override fun bind(local: SocketAddress) {
-        channel.bind(local)
-    }
+    @Suppress("BlockingMethodInNonBlockingContext")
+    override suspend fun bind(local: SocketAddress): Unit =
+        withContext(scope.coroutineContext) {
+            channel.bind(local)
+        }
 
-    override fun accept(): SuspendedSocketChannel =
-        SuspendedSocketChannel(channel.accept()!!)
+    override fun accept(): SuspendedSocketChannel? =
+        channel.accept()?.let {
+            SuspendedSocketChannel(it, dispatcher)
+        }
 
+    @Suppress("BlockingMethodInNonBlockingContext")
     override suspend fun close(wait: Boolean) {
         if (!closing) {
             closing = true
@@ -71,12 +72,15 @@ open class SuspendedServerSocketChannel(
          * @throws IOException An I/O related error was thrown
          */
         @Throws(IOException::class)
-        fun open(address: SocketAddress? = null): SuspendedServerSocketChannel =
-            SuspendedServerSocketChannel(
-                channel = ServerSocketChannel.open().apply {
-                    configureBlocking(false)
-                    address?.let { bind(it) }
-                }
-            )
+        @Suppress("BlockingMethodInNonBlockingContext")
+        suspend fun open(address: SocketAddress? = null): SuspendedServerSocketChannel =
+            coroutineScope {
+                SuspendedServerSocketChannel(
+                    channel = ServerSocketChannel.open().apply {
+                        configureBlocking(false)
+                        address?.let { bind(it) }
+                    }
+                )
+            }
     }
 }
