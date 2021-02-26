@@ -1,17 +1,30 @@
 package operation
 
-import channel.NetworkChannel
+import channel.SuspendedNetworkChannel
 
-sealed class Operation<T : NetworkChannel<*>>(
-    val channel: T,
-    val attachment: Any?
- ) {
+sealed class Operation {
 
-    class Accept<T : NetworkChannel<*>>(channel: T, attachment: Any? = null): Operation<T>(channel, attachment)
+    abstract val channel: SuspendedNetworkChannel<*>
 
-    class Connect<T : NetworkChannel<*>>(channel: T, attachment: Any? = null): Operation<T>(channel, attachment)
+    abstract val attachment: Any?
 
-    class Read<T : NetworkChannel<*>>(channel: T, attachment: Any? = null): Operation<T>(channel, attachment)
+    data class Accept(
+        override val channel: SuspendedNetworkChannel<*>,
+        override val attachment: Any? = null
+    ): Operation()
 
-    class Write<T : NetworkChannel<*>>(channel: T, attachment: Any? = null): Operation<T>(channel, attachment)
+    data class Connect(
+        override val channel: SuspendedNetworkChannel<*>,
+        override val attachment: Any? = null
+    ): Operation()
+
+    data class Read(
+        override val channel: SuspendedNetworkChannel<*>,
+        override val attachment: Any? = null)
+        : Operation()
+
+    data class Write(
+        override val channel: SuspendedNetworkChannel<*>,
+        override val attachment: Any? = null
+    ): Operation()
 }

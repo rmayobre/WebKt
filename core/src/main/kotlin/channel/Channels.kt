@@ -1,12 +1,18 @@
 package channel
 
+import kotlinx.coroutines.CoroutineScope
 import java.io.IOException
 import java.net.InetAddress
 import java.net.SocketAddress
 import java.nio.ByteBuffer
 import java.nio.channels.SelectableChannel
+import javax.net.ssl.SSLSession
+import kotlin.jvm.Throws
 
-interface NetworkChannel<T : SelectableChannel> : SuspendedChannel {
+/**
+ * A SuspendedChannel that connects to the machine's network.
+ */
+interface SuspendedNetworkChannel<T : SelectableChannel> : SuspendedChannel {
 
     /** The channel being wrapped. */
     val channel: T
@@ -22,16 +28,23 @@ interface NetworkChannel<T : SelectableChannel> : SuspendedChannel {
 
     /**
      * Binds the channel to the local address provided.
+     * @param local an address the channel will take on the local network.
+     * @throws IOException thrown if channel could not bind to address.
      */
-    fun bind(local: SocketAddress)
+    @Throws(IOException::class)
+    suspend fun bind(local: SocketAddress)
 }
 
+/**
+ * A SuspendedChannel that can read and write data.
+ */
 interface SuspendedByteChannel : SuspendedChannel {
     /**
      * A suspended process of reading from a socket connection into a buffer.
      * @param buffer the buffer where data is read into.
      * @throws IOException thrown if there is a problem reading from socket.
      */
+    @Throws(IOException::class)
     suspend fun read(buffer: ByteBuffer): Int
 
     /**
@@ -39,10 +52,15 @@ interface SuspendedByteChannel : SuspendedChannel {
      * @param buffer the data what will be written into the socket.
      * @throws IOException thrown if there is a problem reading from socket.
      */
+    @Throws(IOException::class)
     suspend fun write(buffer: ByteBuffer): Int
 }
 
-interface ClientChannel<T : SelectableChannel> : NetworkChannel<T>, SuspendedByteChannel {
+/**
+ * A SuspendedChannel that orchestrates communication between endpoints. ClientChannels are able to send and receive
+ * data and maintain the connection of a socket.
+ */
+interface ClientChannel<T : SelectableChannel> : SuspendedNetworkChannel<T>, SuspendedByteChannel {
     /** Get the channel's remote address. */
     val remoteAddress: SocketAddress
 
@@ -54,20 +72,72 @@ interface ClientChannel<T : SelectableChannel> : NetworkChannel<T>, SuspendedByt
      * a ClientNetworkChannel to send and receive data from the
      * remote address.
      * @param remote the targeted remote address.
+     * @throws IOException Could not connect to remote address.
      */
-    fun connect(remote: SocketAddress)
+    @Throws(IOException::class)
+    suspend fun connect(remote: SocketAddress): Boolean
 }
 
-interface ServerChannel<T : SelectableChannel, C : SelectableChannel> : NetworkChannel<T> {
+/**
+ * A SuspendedChannel that accepts new incoming connections.
+ */
+interface ServerChannel<T : SelectableChannel, C : SelectableChannel> : SuspendedNetworkChannel<T> {
     /**
      * Accepts an incoming connection and constructs a SuspendedSocketChannel as
-     * the connection's interface.
+     * the connection's interface. Returns null if nothing to accept.
+     * @throws IOException Issues while accepting new connection.
      */
-    fun accept(): ClientChannel<C>
+    @Throws(IOException::class)
+    fun accept(): ClientChannel<C>?
 }
 
 interface SuspendedChannel {
+    /** Is the channel open? */
     val isOpen: Boolean
 
-    suspend fun close()
+    /** The CoroutineScope that is operating the network jobs. */
+    val scope: CoroutineScope
+
+    /**
+     * Close the channel and socket. If [wait] is set to TRUE, the channel will prevent any new suspend function calls
+     * from creating jobs on the [SuspendedChannel.scope] CoroutineScope.
+     * @param wait wait for jobs to finish? If this is marked FALSE, then it will cancel all jobs.
+     */
+    suspend fun close(wait: Boolean = false)
+}
+
+interface TLSChannel {
+
+    /** Channel's SSLSession created from SSLEngine. */
+    val session: SSLSession
+
+    /**
+     * Implements the handshake protocol between two peers, required for the establishment of the SSL/TLS connection.
+     * During the handshake, encryption configuration information - such as the list of available cipher suites - will be exchanged
+     * and if the handshake is successful will lead to an established SSL/TLS session.
+     *
+     * Handshake is also used during the end of the session, in order to properly close the connection between the two peers.
+     * A proper connection close will typically include the one peer sending a CLOSE message to another, and then wait for
+     * the other's CLOSE message to close the transport link. The other peer from his perspective would read a CLOSE message
+     * from his peer and then enter the handshake procedure to send his own CLOSE message as well.
+     *
+     * Example handshake process:
+     *
+     * 1. wrap:     ClientHello
+     * 2. unwrap:   ServerHello/Cert/ServerHelloDone
+     *
+     *    unwrap (continued):
+     *              The unwrap process could happen multiple
+     *              times if the SocketChannel is non-blocking.
+     *
+     * 3. wrap:     ClientKeyExchange
+     * 4. wrap:     ChangeCipherSpec
+     * 5. wrap:     Finished
+     * 6. unwrap:   ChangeCipherSpec
+     * 7. unwrap:   Finished
+     *
+     * @return True if the connection handshake was successful or false if an error occurred.
+     * @throws IOException if an error occurs during read/write to the socket channel.
+     */
+    suspend fun performHandshake(): Boolean
 }

@@ -11,6 +11,7 @@ import java.nio.channels.NotYetBoundException
  * All possible results of [SuspendedServerSocketChannel.accept].
  * @see SuspendedServerSocketChannel.accept
  */
+@Deprecated("remove")
 sealed class OperationResult<T> {
 
     /**
