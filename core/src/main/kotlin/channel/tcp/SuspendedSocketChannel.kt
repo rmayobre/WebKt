@@ -10,7 +10,7 @@ import java.nio.channels.*
 import kotlin.jvm.Throws
 
 open class SuspendedSocketChannel(
-    override val channel: SocketChannel,
+    final override val channel: SocketChannel,
     dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ClientChannel<SocketChannel> {
 
@@ -38,6 +38,10 @@ open class SuspendedSocketChannel(
 
     override val localPort: Int
         get() = channel.socket().localPort
+
+    init {
+        channel.configureBlocking(false)
+    }
 
     @Suppress("BlockingMethodInNonBlockingContext")
     override suspend fun bind(local: SocketAddress): Unit =
@@ -130,9 +134,7 @@ open class SuspendedSocketChannel(
                     SuspendedSocketChannel(
                         channel = (remote?.let {
                             SocketChannel.open(it)
-                        } ?: SocketChannel.open()).apply {
-                            configureBlocking(false)
-                        }
+                        } ?: SocketChannel.open())
                     )
                 }
             }

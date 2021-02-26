@@ -60,13 +60,12 @@ class SecureServerSocketChannel(
         ): SecureServerSocketChannel =
             coroutineScope {
                 SecureServerSocketChannel(
-                    channel = ServerSocketChannel.open().apply {
-                        configureBlocking(false)
-                        address?.let { bind(it) }
-                    },
+                    channel = ServerSocketChannel.open(),
                     context,
                     dispatcher
-                )
+                ).apply {
+                    address?.let { bind(it) }
+                }
             }
     }
 }

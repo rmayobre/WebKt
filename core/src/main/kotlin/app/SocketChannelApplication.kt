@@ -1,109 +1,119 @@
 package app
 
+import MissingAttachmentException
+import channel.tcp.SuspendedSocketChannel
+import engine.Attachment
+import engine.NetworkChannelEngine
 import kotlinx.coroutines.*
-import java.nio.channels.SelectableChannel
+import operation.OperationsChannel
 import java.nio.channels.SelectionKey
-import java.nio.channels.SocketChannel
 
+/**
+ * A [NetworkApplication] that handles client-side networking operations. The SocketChannelApplication
+ * is designed to help manage the event cycle of [SuspendedSocketChannel]s, and notify when specific
+ * event occur. This abstract class will help manage the logic for connecting, as well as read/write
+ * operations.
+ */
 abstract class SocketChannelApplication(
     dispatcher: CoroutineDispatcher = Dispatchers.IO
 ): NetworkApplication {
 
-    private val supervisor = SupervisorJob()
+    final override val appScope: CoroutineScope =
+        CoroutineScope(SupervisorJob() + dispatcher)
 
-    override val appScope: CoroutineScope =
-        CoroutineScope(supervisor + dispatcher)
-
-    override fun onValidKey(key: SelectionKey): Unit = with(appScope) {
-        // Remove key from selector to prevent
-        // the key from being processed again.
-        key.cancel()
-
-        // What operation is the key ready for?
-        when {
-
-            //
-            // A channel has able to connect to remote address.
-            //
-            key.isConnectable ->
-                launch(
-                    CoroutineExceptionHandler { _, error ->
-                        launch {
-                            onException(
-                                channel = key.channel(),
-                                attachment = key.attachment(),
-                                error)
-                        }
-                    }
-                ) {
-                    onConnect(
-                        channel = key.channel() as SocketChannel,
-                        attachment = key.attachment()
-                    )
-                }
-
-            //
-            // A channel, registered to the selector, has incoming data.
-            //
-            key.isReadable ->
-                launch(
-                    CoroutineExceptionHandler { _, error ->
-                        launch {
-                            onException(
-                                channel = key.channel(),
-                                attachment = key.attachment(),
-                                error)
-                        }
-                    }
-                ) {
-                    onRead(
-                        channel = key.channel() as SocketChannel,
-                        attachment = key.attachment()
-                    )
-                }
-
-            //
-            // A channel, registered to the selector, has data to be written.
-            //
-            key.isWritable ->
-                launch(
-                    CoroutineExceptionHandler { _, error ->
-                        launch {
-                            onException(
-                                channel = key.channel(),
-                                attachment = key.attachment(),
-                                error)
-                        }
-                    }
-                ) {
-                    onWrite(
-                        channel = key.channel() as SocketChannel,
-                        attachment = key.attachment()
-                    )
-                }
+    final override fun onValidKey(key: SelectionKey) {
+        try {
+            // What operation is the key ready for?
+            when {
+                // A channel has able to connect to remote address.
+                key.isConnectable -> (key.attachment() as? Attachment<*>)?.onConnectable()
+                    ?: throw MissingAttachmentException()
+                // A channel, registered to the selector, has incoming data.
+                key.isReadable -> (key.attachment() as? Attachment<*>)?.onReadable()
+                    ?: throw MissingAttachmentException()
+                // A channel, registered to the selector, has data to be written.
+                key.isWritable -> (key.attachment() as? Attachment<*>)?.onWritable()
+                    ?: throw MissingAttachmentException()
+            }
+        } catch (ex: Exception) {
+            appScope.launch {
+                onException(key, ex)
+            }
         }
     }
 
-    /**
-     * An operations event of the engine.deprecated.AbstractChannelEngine. This means the Selector has provided a SelectionKey that has
-     * a channel, ready to finish connection.
-     * @param key The SelectionKey providing the SelectableChannel with a new incoming connection.
-     */
-    protected abstract suspend fun onConnect(channel: SocketChannel, attachment: Any?)
+    private fun Attachment<*>.onConnectable(): Unit = with(appScope) {
+        if (channel is SuspendedSocketChannel) {
+            launch(context = CoroutineExceptionHandler { _, error ->
+                launch {
+                    onException(channel, storage, error)
+                }
+            }) {
+                onConnect(channel, storage)
+            }
+        }
+    }
+
+    private fun Attachment<*>.onReadable(): Unit = with(appScope) {
+        if (channel is SuspendedSocketChannel) {
+            launch(context = CoroutineExceptionHandler { _, error ->
+                launch {
+                    onException(channel, storage, error)
+                }
+            }) {
+                onRead(channel, storage)
+            }
+        }
+    }
+
+    private fun Attachment<*>.onWritable(): Unit = with(appScope) {
+        if (channel is SuspendedSocketChannel) {
+            launch(context = CoroutineExceptionHandler { _, error ->
+                launch {
+                    onException(channel, storage, error)
+                }
+            }) {
+                onWrite(channel, storage)
+            }
+        }
+    }
+
+    /** The NetworkChannelEngine required to run the application. */
+    protected abstract val engine: NetworkChannelEngine
 
     /**
-     * An operations event of the engine.deprecated.AbstractChannelEngine. This means the Selector has provided a SelectionKey with a channel
-     * that has incoming data being sent from the opposing endpoint.
-     * @param key The SelectionKey providing the SelectableChannel with a new incoming connection.
+     * An operations event of the SuspendedSocketChannel. The Channel is ready to connect.
+     * @param channel The channel that is ready to connect.
+     * @param attachment an object associated with the channel. To register an attachment to a channel
+     *                   you must attach it through the OperationChannel.
+     * @see OperationsChannel
      */
-    protected abstract suspend fun onRead(channel: SocketChannel, attachment: Any?)
+    protected abstract suspend fun onConnect(channel: SuspendedSocketChannel, attachment: Any?)
 
     /**
-     * An operations event of the engine.deprecated.AbstractChannelEngine. This means the Selector has provided a SelectionKey that is ready
-     * for it's channel to write data.
-     * @param key The SelectionKey providing the SelectableChannel with a new incoming connection.
+     * An operations event of the SuspendedSocketChannel. The Channel is ready to be written.
+     * @param channel the channel to be written to.
+     * @param attachment an object associated with the channel. To register an attachment to a channel
+     *                   you must attach it through the OperationChannel.
+     * @see OperationsChannel
      */
-    protected abstract suspend fun onWrite(channel: SocketChannel, attachment: Any?)
+    protected abstract suspend fun onRead(channel: SuspendedSocketChannel, attachment: Any?)
+
+    /**
+     * An operations event of the SuspendedSocketChannel. The Channel is ready to be written.
+     * @param channel the channel to be written to.
+     * @param attachment an object associated with the channel. To register an attachment to a channel
+     *                   you must attach it through the OperationChannel.
+     * @see OperationsChannel
+     */
+    protected abstract suspend fun onWrite(channel: SuspendedSocketChannel, attachment: Any?)
+
+    /**
+     * A SelectionKey was missing it's attachments or an unhandled exception occurred.
+     * @param key The SelectionKey within context of the exception.
+     * @param cause The exception thrown.
+     */
+    protected abstract suspend fun onException(key: SelectionKey, cause: Throwable)
 
     /**
      * Reports an exception occurred while processing a channel.
@@ -111,5 +121,5 @@ abstract class SocketChannelApplication(
      * @param channel The channel being used while the exception occurred.
      * @param attachment a nullable attachment provided with the SelectableChannel
      */
-    protected abstract suspend fun onException(channel: SelectableChannel, attachment: Any?, error: Throwable)
+    protected abstract suspend fun onException(channel: SuspendedSocketChannel, attachment: Any?, error: Throwable)
 }

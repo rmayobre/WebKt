@@ -6,6 +6,7 @@ import java.io.IOException
 import java.net.InetAddress
 import java.net.SocketAddress
 import java.nio.channels.*
+import javax.xml.ws.Dispatch
 import kotlin.jvm.Throws
 
 /**
@@ -13,7 +14,8 @@ import kotlin.jvm.Throws
  * Kotlin and Kotlin's Coroutine library.
  */
 open class SuspendedServerSocketChannel(
-    override val channel: ServerSocketChannel,
+    final override val channel: ServerSocketChannel,
+    /** This dispatcher will be  */
     protected val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ServerChannel<ServerSocketChannel, SocketChannel> {
 
@@ -35,6 +37,10 @@ open class SuspendedServerSocketChannel(
 
     override val localPort: Int
         get() = channel.socket().localPort
+
+    init {
+        channel.configureBlocking(false)
+    }
 
     @Suppress("BlockingMethodInNonBlockingContext")
     override suspend fun bind(local: SocketAddress): Unit =
@@ -68,19 +74,22 @@ open class SuspendedServerSocketChannel(
     companion object {
         /**
          * Opens a standard ServerSocketChannel and constructs a SuspendedServerSocketChannel.
-         * @param protocol Set a ProtocolFamily to the SeverSocketChannel.
+         * @param address If an address is specified, the socket will bind immediately to the address.
          * @throws IOException An I/O related error was thrown
          */
         @Throws(IOException::class)
         @Suppress("BlockingMethodInNonBlockingContext")
-        suspend fun open(address: SocketAddress? = null): SuspendedServerSocketChannel =
+        suspend fun open(
+            address: SocketAddress? = null,
+            dispatcher: CoroutineDispatcher = Dispatchers.IO
+        ): SuspendedServerSocketChannel =
             coroutineScope {
                 SuspendedServerSocketChannel(
-                    channel = ServerSocketChannel.open().apply {
-                        configureBlocking(false)
-                        address?.let { bind(it) }
-                    }
-                )
+                    channel = ServerSocketChannel.open(),
+                    dispatcher
+                ).apply {
+                    address?.let { bind(it) }
+                }
             }
     }
 }

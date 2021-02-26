@@ -1,9 +1,7 @@
 package channel.tcp
 
-import channel.tls.TLSChannel
+import channel.TLSChannel
 import channel.toString
-import copyBytesTo
-import increaseBufferSizeTo
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.channels.actor
@@ -18,6 +16,7 @@ import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 import kotlin.jvm.Throws
+import kotlin.math.min
 
 /**
  * @param channel
@@ -123,6 +122,7 @@ class SecureSocketChannel(
         }
     }
 
+    @ExperimentalCoroutinesApi
     @Suppress("BlockingMethodInNonBlockingContext")
     override suspend fun write(buffer: ByteBuffer): Int = suspendCoroutine { continuation ->
         scope.launch {
@@ -324,6 +324,39 @@ class SecureSocketChannel(
         }
 
         /**
+         * Compares `sessionProposedCapacity` with buffer's capacity. If buffer's capacity is smaller,
+         * returns a buffer with the proposed capacity. If it's equal or larger, returns a buffer
+         * with capacity twice the size of the initial one.
+         *
+         * @param this - the buffer to be enlarged.
+         * @param size - the minimum size of the new buffer, proposed by [SSLSession].
+         * @return A new buffer with a larger allocated capacity.
+         */
+        internal fun ByteBuffer.increaseBufferSizeTo(size: Int): ByteBuffer =
+            if (size > capacity()) {
+                ByteBuffer.allocate(size)
+            } else {
+                ByteBuffer.allocate(capacity() * 2)
+            }
+
+
+        /**
+         * Copy bytes from "this" ByteBuffer to the designated "buffer" ByteBuffer.
+         * @param buffer The designated buffer for all bytes to move to.
+         * @return number of bytes copied to the other buffer.
+         */
+        internal fun ByteBuffer.copyBytesTo(buffer: ByteBuffer): Int =
+            if (remaining() > buffer.remaining()) {
+                val limit = min(remaining(), buffer.remaining())
+                limit(limit)
+                buffer.put(this)
+                limit
+            } else {
+                buffer.put(this)
+                remaining()
+            }
+
+        /**
          * Open a SuspendedSocketChannel and connect to the provided remote address. If no SocketAddress
          * was provided, then the channel will construct and require the [connect] function to be called.
          *
@@ -360,9 +393,7 @@ class SecureSocketChannel(
                 SecureSocketChannel(
                     channel = (remote?.let {
                         SocketChannel.open(it)
-                    } ?: SocketChannel.open()).apply {
-                        configureBlocking(false)
-                    },
+                    } ?: SocketChannel.open()),
                     engine = engine.apply {
                         beginHandshake()
                     },
